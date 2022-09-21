@@ -1,6 +1,7 @@
 import { getSceneBuilder } from './scene';
 import * as THREE from 'three';
 import { getUpdater, registerEvent } from './updater';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
 window.addEventListener('resize', () => {
 	renderer.setSize(window.innerWidth, window.innerHeight);
@@ -18,6 +19,8 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
+const orbitControls = new OrbitControls(camera, renderer.domElement);
+
 const sceneBuilder = getSceneBuilder(camera);
 
 const { scene, forklift } = sceneBuilder.initialize();
@@ -29,6 +32,9 @@ registerEvent(() => {
 	forklift.updatePosition();
 	forklift.reset();
 });
+
+// Set camera
+sceneBuilder.setGlobalCamera();
 
 function animate() {
 	requestAnimationFrame(animate);
@@ -54,8 +60,20 @@ function setUpControllers() {
 		w: { pressed: false, callback: forklift.accelerate },
 		s: { pressed: false, callback: forklift.decelerate },
 		c: { pressed: false, callback: sceneBuilder.switchCamera },
-		1: { pressed: false, callback: sceneBuilder.setGlobalCamera },
-		2: { pressed: false, callback: sceneBuilder.setThirdPersonCamera },
+		1: {
+			pressed: false,
+			callback: () => {
+				sceneBuilder.setGlobalCamera();
+				orbitControls.enabled = true;
+			},
+		},
+		2: {
+			pressed: false,
+			callback: () => {
+				orbitControls.enabled = false;
+				sceneBuilder.setThirdPersonCamera();
+			},
+		},
 		u: { pressed: false, callback: forklift.liftUp },
 		j: { pressed: false, callback: forklift.liftDown },
 	};

@@ -1,5 +1,6 @@
-import { Mesh, Object3D, Vector3 } from 'three';
+import { Mesh } from 'three';
 import { getHangar, Hangar } from './hangar';
+import * as THREE from 'three';
 
 export type Forklift = {
 	accelerate: () => void;
@@ -12,6 +13,7 @@ export type Forklift = {
 	getMesh: () => Mesh;
 	liftUp: () => void;
 	liftDown: () => void;
+	mesh: Mesh;
 };
 
 type LiftRange = {
@@ -44,10 +46,10 @@ function getForklift() {
 	return forklift;
 }
 
-function createForklift(mesh: Mesh, properties: ForkliftProperties) {
+function createForklift(properties: ForkliftProperties) {
 	let _turnSensitivity = properties.turnSensitivity;
 	let _speed = properties.speed;
-	let _mesh = mesh;
+	let _mesh = generateForkliftMesh(properties.size, properties.liftSize);
 	let _deltaMovement = 0;
 	let _size = properties.size;
 	let _liftSize = properties.liftSize;
@@ -167,8 +169,66 @@ function createForklift(mesh: Mesh, properties: ForkliftProperties) {
 		getMesh,
 		liftUp,
 		liftDown,
+		mesh: _mesh,
 	};
 	return forklift;
+}
+
+function generateForkliftMesh(forkliftSize: ForkliftSize, liftSize: LiftSize) {
+	//body
+	let geometry: THREE.BufferGeometry = new THREE.BoxGeometry(
+		forkliftSize.width,
+		forkliftSize.height,
+		forkliftSize.length
+	);
+	geometry.rotateX(Math.PI / 2);
+	geometry.rotateZ(Math.PI / 2);
+	let material = new THREE.MeshStandardMaterial({ color: 0xfdda0d });
+	const bodyMesh = new THREE.Mesh(geometry, material);
+
+	//lift
+	geometry = new THREE.BoxGeometry(
+		forkliftSize.width,
+		liftSize.height,
+		liftSize.length
+	);
+	geometry.rotateX(Math.PI / 2);
+	geometry.rotateZ(Math.PI / 2);
+	material = new THREE.MeshStandardMaterial({ color: 0xffbf00 });
+	const liftMesh = new Mesh(geometry, material);
+	liftMesh.name = 'lift';
+	bodyMesh.add(liftMesh);
+	liftMesh.translateX(forkliftSize.length / 2 + liftSize.length / 2);
+
+	//wheels
+	const wheelSize = {
+		radius: forkliftSize.length / 6,
+		width: 0.4,
+	};
+	for (let i = 0; i < 4; i++) {
+		geometry = new THREE.CylinderGeometry(
+			wheelSize.radius,
+			wheelSize.radius,
+			wheelSize.width,
+			14,
+			1,
+			false
+		);
+		material = new THREE.MeshStandardMaterial({ color: 0x2f2a2d });
+		const wheelMesh = new Mesh(geometry, material);
+		wheelMesh.name = 'wheel' + i;
+		bodyMesh.add(wheelMesh);
+
+		wheelMesh.translateX(((i < 2 ? 1 : -1) * forkliftSize.length) / 3);
+		wheelMesh.translateY(
+			(i % 2 == 0 ? 1 : -1) * (forkliftSize.width / 2 + wheelSize.width / 2)
+		);
+		wheelMesh.translateZ(-forkliftSize.height / 2);
+	}
+
+	bodyMesh.translateZ(forkliftSize.height / 2 + wheelSize.radius);
+
+	return bodyMesh;
 }
 
 export { createForklift, getForklift };
