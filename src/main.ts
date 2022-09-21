@@ -1,38 +1,84 @@
-import * as THREE from "three";
+import { getSceneBuilder } from './scene';
+import * as THREE from 'three';
+import { getUpdater, registerEvent } from './updater';
 
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
-
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize( window.innerWidth, window.innerHeight );
-document.body.appendChild( renderer.domElement );
-
-const clock = new THREE.Clock();
-
-const geometry = new THREE.BoxGeometry( 1, 1, 1 );
-const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
-const cube = new THREE.Mesh( geometry, material );
-scene.add( cube );
-
-camera.position.z = 5;
-
-function onWindowResize() {
+window.addEventListener('resize', () => {
+	renderer.setSize(window.innerWidth, window.innerHeight);
 	camera.aspect = window.innerWidth / window.innerHeight;
 	camera.updateProjectionMatrix();
-	renderer.setSize(window.innerWidth, window.innerHeight);
-}
-window.addEventListener('resize', onWindowResize);
+});
 
-function update(dt: number) {
-	cube.rotation.x += dt;
-	cube.rotation.y += dt;
-}
+const camera = new THREE.PerspectiveCamera(
+	75,
+	window.innerWidth / window.innerHeight,
+	0.1,
+	1000
+);
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const sceneBuilder = getSceneBuilder(camera);
+
+const { scene, forklift } = sceneBuilder.initialize();
+
+const resolveKeyboardActions = setUpControllers();
+
+const updater = getUpdater();
+registerEvent(() => {
+	forklift.updatePosition();
+	forklift.reset();
+});
 
 function animate() {
-	let dt = clock.getDelta();
 	requestAnimationFrame(animate);
-	update(dt);
+
+	resolveKeyboardActions();
+
+	updater.updateAll();
+
 	renderer.render(scene, camera);
 }
-clock.start();
+
 animate();
+
+function setUpControllers() {
+	type EventKeys = 'a' | 'd' | 'w' | 's' | 'c' | '1' | '2' | 'u' | 'j';
+
+	type Controller = {
+		[key in EventKeys]: { pressed: boolean; callback: Function };
+	};
+	const controller: Controller = {
+		a: { pressed: false, callback: forklift.turnLeft },
+		d: { pressed: false, callback: forklift.turnRight },
+		w: { pressed: false, callback: forklift.accelerate },
+		s: { pressed: false, callback: forklift.decelerate },
+		c: { pressed: false, callback: sceneBuilder.switchCamera },
+		1: { pressed: false, callback: sceneBuilder.setGlobalCamera },
+		2: { pressed: false, callback: sceneBuilder.setThirdPersonCamera },
+		u: { pressed: false, callback: forklift.liftUp },
+		j: { pressed: false, callback: forklift.liftDown },
+	};
+
+	function isEventKey(str: string): str is EventKeys {
+		return str in controller;
+	}
+
+	document.addEventListener('keydown', function (event) {
+		if (isEventKey(event.key)) {
+			controller[event.key].pressed = true;
+		}
+	});
+	document.addEventListener('keyup', function (event) {
+		if (isEventKey(event.key)) {
+			controller[event.key].pressed = false;
+		}
+	});
+
+	return () => {
+		Object.keys(controller).forEach(key => {
+			if (isEventKey(key) && controller[key].pressed)
+				controller[key].callback();
+		});
+	};
+}
