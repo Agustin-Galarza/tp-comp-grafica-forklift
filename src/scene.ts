@@ -7,6 +7,7 @@ import {
 	PointLight,
 	Scene,
 	SphereGeometry,
+	Vector2,
 	Vector3,
 } from 'three';
 import {
@@ -17,6 +18,7 @@ import {
 	LiftSize,
 } from './forklift';
 import { createHangar, Hangar, HangarSize } from './hangar';
+import { createPrinter, Printer, PrinterSize } from './printer';
 
 const CONSTANTS = {
 	forklift: {
@@ -38,6 +40,10 @@ const CONSTANTS = {
 	hangar: {
 		size: { width: 100, length: 100, height: 20 } as HangarSize,
 	} as const,
+	printer: {
+		size: { width: 4, length: 4, height: 4 } as PrinterSize,
+		position: new Vector2(10, 10),
+	} as const,
 };
 
 // scene object that handles object creation
@@ -46,6 +52,7 @@ function getSceneBuilder(mainCamera: THREE.PerspectiveCamera) {
 	let forklift: Forklift;
 	let hangar: Hangar;
 	let scene: Scene;
+	let printer: Printer;
 	function initialize() {
 		scene = new THREE.Scene();
 
@@ -70,14 +77,19 @@ function getSceneBuilder(mainCamera: THREE.PerspectiveCamera) {
 		hangar = createHangar(CONSTANTS.hangar.size);
 		scene.add(hangar.mesh);
 
-		// create forklift mesh
 		// create forklift
 		forklift = createForklift(CONSTANTS.forklift.properties);
 		hangar.mesh.add(forklift.mesh);
 
+		//create printer
+		printer = createPrinter(CONSTANTS.printer.position, CONSTANTS.printer.size);
+		hangar.mesh.add(printer.mesh);
+
 		return {
 			scene,
 			forklift,
+			hangar,
+			printer,
 		};
 	}
 

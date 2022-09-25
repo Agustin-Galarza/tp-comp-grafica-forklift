@@ -1,20 +1,8 @@
-import { Mesh } from 'three';
+import { Euler, Mesh, Vector2 } from 'three';
 import { getHangar, Hangar } from './hangar';
-import * as THREE from 'three';
 
-export type Forklift = {
-	accelerate: () => void;
-	decelerate: () => void;
-	reset: () => void;
-	turnLeft: () => void;
-	turnRight: () => void;
-	updatePosition: () => void;
-	getPosition: () => { x: number; y: number; z: number; orientation: number };
-	getMesh: () => Mesh;
-	liftUp: () => void;
-	liftDown: () => void;
-	mesh: Mesh;
-};
+import * as THREE from 'three';
+import { AABB, BoxShape, Moving, Orientation } from './collisionManager';
 
 type LiftRange = {
 	top: number;
@@ -40,138 +28,127 @@ export type ForkliftProperties = {
 	liftSize: LiftSize;
 };
 
-let forklift: Forklift | undefined = undefined;
+export type ForkliftType = { new (): Forklift };
+
+let forklift: ForkliftType | undefined = undefined;
 
 function getForklift() {
 	return forklift;
 }
+export class Forklift extends BoxShape implements Moving {
+	private turnSensitivity: number;
+	private speed: number;
+	readonly mesh: Mesh;
+	private liftSize: LiftSize;
+	private liftRange: LiftRange;
+	private liftSensitivity;
+	private hangar: Hangar;
+	private deltaMovement: number = 0;
+	constructor(properties: ForkliftProperties) {
+		super(
+			new Vector2(),
+			new Orientation(),
+			properties.size.width,
+			properties.size.height,
+			properties.size.length + properties.liftSize.length
+		);
+		this.liftSize = properties.liftSize;
+		this.liftRange = {
+			top: (this.height * 3) / 2,
+			bottom: -this.height / 2 + this.liftSize.height / 2,
+		};
+		this.speed = properties.speed;
+		this.hangar = getHangar()!;
+		this.mesh = generateForkliftMesh(properties.size, properties.liftSize);
+		this.turnSensitivity = properties.turnSensitivity;
+		this.liftSensitivity = properties.liftSensitivity;
+	}
+	getPosition() {
+		return this.position;
+	}
+	accelerate() {
+		this.deltaMovement += this.speed;
+		this.animateWheels();
+	}
+	decelerate() {
+		this.deltaMovement -= this.speed;
+		this.animateWheels(true);
+	}
+	reset() {
+		this.deltaMovement = 0;
+	}
+	turnLeft() {
+		this.orientation.rotate(this.turnSensitivity);
+	}
+	turnRight() {
+		this.orientation.rotate(-this.turnSensitivity);
+	}
+	liftUp() {
+		const lift = this.getLift()!;
+		if (lift.position.z >= this.liftRange.top) return;
+		lift.translateZ(this.liftSensitivity);
+	}
+	liftDown() {
+		const lift = this.getLift()!;
+		if (lift.position.z <= this.liftRange.bottom) return;
+		lift.translateZ(-this.liftSensitivity);
+	}
+	getAABB(): AABB {
+		const zero = () => new Vector2();
+		const front = new Vector2(
+			this.depth / 2 + this.liftSize.length
+		).rotateAround(zero(), this.orientation.value);
+		const back = new Vector2(this.depth / 2).rotateAround(
+			zero(),
+			this.orientation.value + Math.PI
+		);
+		const right = new Vector2(this.width / 2).rotateAround(
+			zero(),
+			this.orientation.value - Math.PI / 2
+		);
+		const left = new Vector2(this.width / 2).rotateAround(
+			zero(),
+			this.orientation.value + Math.PI / 2
+		);
+		const corners = [
+			new Vector2().add(this.position).add(front).add(right),
+			new Vector2().add(this.position).add(front).add(left),
+			new Vector2().add(this.position).add(back).add(right),
+			new Vector2().add(this.position).add(back).add(left),
+		];
+		return {
+			xMax: Math.max(...corners.map(p => p.x)),
+			xMin: Math.min(...corners.map(p => p.x)),
+			yMax: Math.max(...corners.map(p => p.y)),
+			yMin: Math.min(...corners.map(p => p.y)),
+		};
+	}
+	updatePosition() {
+		this.position = new Vector2(this.deltaMovement)
+			.rotateAround(new Vector2(), this.orientation.value)
+			.add(this.position);
 
-function createForklift(properties: ForkliftProperties) {
-	let _turnSensitivity = properties.turnSensitivity;
-	let _speed = properties.speed;
-	let _mesh = generateForkliftMesh(properties.size, properties.liftSize);
-	let _deltaMovement = 0;
-	let _size = properties.size;
-	let _liftSize = properties.liftSize;
-	let _position = {
-		x: 0,
-		y: 0,
-		z: _size.height / 2,
-		orientation: 0,
-	};
-	let _liftRange: LiftRange = {
-		top: (_size.height * 3) / 2,
-		bottom: -_size.height / 2 + _liftSize.height / 2,
-	};
-	let hangar: Hangar = getHangar()!;
-	function accelerate() {
-		_deltaMovement += _speed;
-		_animateWheels();
+		this.updateMeshPosition();
+		return this.position;
 	}
-	function decelerate() {
-		_deltaMovement -= _speed;
-		_animateWheels(true);
+	private updateMeshPosition() {
+		this.mesh.position.x = this.position.x;
+		this.mesh.position.y = this.position.y;
+		this.mesh.rotation.z = this.orientation.value;
 	}
-	function reset() {
-		_deltaMovement = 0;
+	private getLift() {
+		return this.mesh.getObjectByName('lift');
 	}
-	function turnLeft() {
-		_position.orientation += _turnSensitivity;
-		while (_position.orientation >= 2 * Math.PI) {
-			_position.orientation -= 2 * Math.PI;
-		}
-	}
-	function turnRight() {
-		_position.orientation -= _turnSensitivity;
-		while (_position.orientation < 0) {
-			_position.orientation += 2 * Math.PI;
-		}
-	}
-	function liftUp() {
-		const lift = _getLift()!;
-		if (lift.position.z >= _liftRange.top) return;
-		lift.translateZ(properties.liftSensitivity);
-	}
-	function liftDown() {
-		const lift = _getLift()!;
-		if (lift.position.z <= _liftRange.bottom) return;
-		lift.translateZ(-properties.liftSensitivity);
-	}
-	function updatePosition() {
-		let x_pos = _position.x + _deltaMovement * Math.cos(_position.orientation);
-		let y_pos = _position.y + _deltaMovement * Math.sin(_position.orientation);
-
-		let x_front =
-			(_size.length / 2 + _liftSize.length) * Math.cos(_position.orientation) +
-			(_size.width / 2) * Math.sin(_position.orientation);
-		let y_front =
-			(_size.length / 2 + _liftSize.length) * Math.sin(_position.orientation) +
-			(_size.width / 2) * Math.cos(_position.orientation);
-		let x_back =
-			(_size.length / 2) * Math.cos(_position.orientation + Math.PI) +
-			(_size.width / 2) * Math.sin(_position.orientation + Math.PI);
-		let y_back =
-			(_size.length / 2) * Math.sin(_position.orientation + Math.PI) +
-			(_size.width / 2) * Math.cos(_position.orientation + Math.PI);
-
-		if (
-			!hangar.isOutOfBoundsX(x_pos + x_front) &&
-			!hangar.isOutOfBoundsX(x_pos + x_back)
-		) {
-			_position.x = x_pos;
-		} else {
-			_position.x =
-				Math.sign(_position.x) * (hangar.size.width / 2 - Math.abs(x_front));
-		}
-		if (
-			!hangar.isOutOfBoundsY(y_pos + y_back) &&
-			!hangar.isOutOfBoundsY(y_pos + y_front)
-		) {
-			_position.y = y_pos;
-		} else {
-			_position.y =
-				Math.sign(_position.y) * (hangar.size.width / 2 - Math.abs(y_front));
-		}
-
-		_updateMeshPosition();
-	}
-	function _updateMeshPosition() {
-		_mesh.position.x = _position.x;
-		_mesh.position.y = _position.y;
-		_mesh.rotation.z = _position.orientation;
-	}
-	function getPosition() {
-		return _position;
-	}
-	function getMesh() {
-		return _mesh;
-	}
-	function _getLift() {
-		return _mesh.getObjectByName('lift');
-	}
-	function _animateWheels(reverse = false) {
+	private animateWheels(reverse = false) {
 		for (let i = 0; i < 4; i++) {
-			const wheel = _mesh.getObjectByName('wheel' + i)!;
+			const wheel = this.mesh.getObjectByName('wheel' + i)!;
 			wheel.rotateY((reverse ? -1 : 1) * 0.1);
 		}
 	}
+}
 
-	_updateMeshPosition();
-
-	forklift = {
-		accelerate,
-		decelerate,
-		reset,
-		turnLeft,
-		turnRight,
-		updatePosition,
-		getPosition,
-		getMesh,
-		liftUp,
-		liftDown,
-		mesh: _mesh,
-	};
-	return forklift;
+function createForklift(properties: ForkliftProperties) {
+	return new Forklift(properties);
 }
 
 function generateForkliftMesh(forkliftSize: ForkliftSize, liftSize: LiftSize) {

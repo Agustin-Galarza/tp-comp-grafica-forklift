@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { Mesh } from 'three';
+import { Mesh, Vector2 } from 'three';
+import { Room } from './collisionManager';
 
 export type HangarSize = {
 	width: number; // x
@@ -9,40 +10,16 @@ export type HangarSize = {
 
 let hangar: Hangar | undefined = undefined;
 
-export type Hangar = {
-	size: HangarSize;
-	isOutOfBounds: (point: HangarCoordinates) => boolean;
-	isOutOfBoundsX: (x: number) => boolean;
-	isOutOfBoundsY: (x: number) => boolean;
-	mesh: Mesh;
-};
-
-export type HangarCoordinates = {
-	x: number; // <-> width
-	y: number; // <-> length
-};
+export class Hangar extends Room {
+	readonly mesh: Mesh;
+	constructor(size: HangarSize) {
+		super(size.width, size.length, size.height);
+		this.mesh = generateHangarMesh(size);
+	}
+}
 
 function createHangar(size: HangarSize) {
-	let _mesh = generateHangarMesh(size);
-	let _size = size;
-
-	function isOutOfBoundsX(x: number) {
-		return Math.abs(x) > _size.width / 2;
-	}
-	function isOutOfBoundsY(y: number) {
-		return Math.abs(y) > _size.length / 2;
-	}
-	function isOutOfBounds(point: HangarCoordinates) {
-		return isOutOfBoundsX(point.x) || isOutOfBoundsY(point.y);
-	}
-	hangar = {
-		size: _size,
-		isOutOfBounds,
-		isOutOfBoundsX,
-		isOutOfBoundsY,
-		mesh: _mesh,
-	};
-	return hangar;
+	return new Hangar(size);
 }
 
 function getHangar() {
