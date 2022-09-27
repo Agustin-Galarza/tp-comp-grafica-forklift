@@ -94,33 +94,21 @@ export class Forklift extends BoxShape implements Moving {
 		lift.translateZ(-this.liftSensitivity);
 	}
 	getAABB(): AABB {
-		const zero = () => new Vector2();
-		const front = new Vector2(
-			this.depth / 2 + this.liftSize.length
-		).rotateAround(zero(), this.orientation.value);
-		const back = new Vector2(this.depth / 2).rotateAround(
-			zero(),
-			this.orientation.value + Math.PI
-		);
-		const right = new Vector2(this.width / 2).rotateAround(
-			zero(),
-			this.orientation.value - Math.PI / 2
-		);
-		const left = new Vector2(this.width / 2).rotateAround(
-			zero(),
-			this.orientation.value + Math.PI / 2
-		);
-		const corners = [
-			new Vector2().add(this.position).add(front).add(right),
-			new Vector2().add(this.position).add(front).add(left),
-			new Vector2().add(this.position).add(back).add(right),
-			new Vector2().add(this.position).add(back).add(left),
+		const y_vals = [
+			(this.depth / 2.4 + this.liftSize.length) *
+				Math.sin(this.orientation.value),
+			(this.depth / 2.4) * Math.sin(this.orientation.value + Math.PI),
+		];
+		const x_vals = [
+			(this.depth / 2.4 + this.liftSize.length) *
+				Math.cos(this.orientation.value),
+			(this.depth / 2.4) * Math.cos(this.orientation.value + Math.PI),
 		];
 		return {
-			xMax: Math.max(...corners.map(p => p.x)),
-			xMin: Math.min(...corners.map(p => p.x)),
-			yMax: Math.max(...corners.map(p => p.y)),
-			yMin: Math.min(...corners.map(p => p.y)),
+			xMax: this.position.x + Math.max(...x_vals),
+			xMin: this.position.x + Math.min(...x_vals),
+			yMax: this.position.y + Math.max(...y_vals),
+			yMin: this.position.y + Math.min(...y_vals),
 		};
 	}
 	updatePosition() {

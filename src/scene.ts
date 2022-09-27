@@ -96,7 +96,10 @@ function getSceneBuilder(mainCamera: THREE.PerspectiveCamera) {
 	function setThirdPersonCamera() {
 		scene.remove(mainCamera);
 		forklift.mesh.add(mainCamera);
-		mainCamera.position.x = -CONSTANTS.camera.distance;
+		// mainCamera.position.x = -CONSTANTS.camera.distance;
+		mainCamera.position.x =
+			CONSTANTS.forklift.properties.size.length / 2 +
+			CONSTANTS.forklift.properties.liftSize.length;
 		mainCamera.position.y = 0;
 		mainCamera.position.z = CONSTANTS.camera.distance;
 		const target = new Vector3();
