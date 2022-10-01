@@ -109,7 +109,7 @@ function getSceneBuilder(mainCamera: THREE.PerspectiveCamera) {
 
 	function setGlobalCamera() {
 		forklift.mesh.remove(mainCamera);
-		hangar.mesh.add(mainCamera);
+		// hangar.mesh.add(mainCamera);
 		mainCamera.position.x = CONSTANTS.camera.distance;
 		mainCamera.position.z = CONSTANTS.camera.distance;
 		mainCamera.position.y = CONSTANTS.camera.distance;

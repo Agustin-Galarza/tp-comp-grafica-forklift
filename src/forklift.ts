@@ -1,9 +1,11 @@
-import { Euler, Mesh, Vector2 } from 'three';
+import { Mesh, Object3D, Vector2 } from 'three';
 import { getHangar, Hangar } from './hangar';
 
 import * as THREE from 'three';
 import { AABB, BoxShape, Moving, Orientation } from './collisionManager';
+import { Printer } from './printer';
 
+const forkliftShininess = 50;
 type LiftRange = {
 	top: number;
 	bottom: number;
@@ -44,6 +46,7 @@ export class Forklift extends BoxShape implements Moving {
 	private liftSensitivity;
 	private hangar: Hangar;
 	private deltaMovement: number = 0;
+	private figure: Object3D | undefined;
 	constructor(properties: ForkliftProperties) {
 		super(
 			new Vector2(),
@@ -62,6 +65,7 @@ export class Forklift extends BoxShape implements Moving {
 		this.mesh = generateForkliftMesh(properties.size, properties.liftSize);
 		this.turnSensitivity = properties.turnSensitivity;
 		this.liftSensitivity = properties.liftSensitivity;
+		this.figure = undefined;
 	}
 	getPosition() {
 		return this.position;
@@ -133,6 +137,21 @@ export class Forklift extends BoxShape implements Moving {
 			wheel.rotateY((reverse ? -1 : 1) * 0.1);
 		}
 	}
+	takeFigure(printer: Printer) {
+		if (this.figure) return;
+		this.figure = printer.giveFigure();
+		if (!this.figure) return;
+
+		const lift = this.getLift()!;
+
+		const xPosition = 0;
+		const yPosition = 0;
+		const zPosition = this.liftSize.height / 2;
+		this.figure.position.set(xPosition, yPosition, zPosition);
+
+		this.figure.rotateX(Math.PI / 2);
+		lift.add(this.figure);
+	}
 }
 
 function createForklift(properties: ForkliftProperties) {
@@ -148,7 +167,10 @@ function generateForkliftMesh(forkliftSize: ForkliftSize, liftSize: LiftSize) {
 	);
 	geometry.rotateX(Math.PI / 2);
 	geometry.rotateZ(Math.PI / 2);
-	let material = new THREE.MeshStandardMaterial({ color: 0xfdda0d });
+	let material = new THREE.MeshPhongMaterial({
+		color: 0xfdda0d,
+		shininess: forkliftShininess,
+	});
 	const bodyMesh = new THREE.Mesh(geometry, material);
 
 	//lift
@@ -159,7 +181,10 @@ function generateForkliftMesh(forkliftSize: ForkliftSize, liftSize: LiftSize) {
 	);
 	geometry.rotateX(Math.PI / 2);
 	geometry.rotateZ(Math.PI / 2);
-	material = new THREE.MeshStandardMaterial({ color: 0xffbf00 });
+	material = new THREE.MeshPhongMaterial({
+		color: 0xffbf00,
+		shininess: forkliftShininess,
+	});
 	const liftMesh = new Mesh(geometry, material);
 	liftMesh.name = 'lift';
 	bodyMesh.add(liftMesh);
@@ -179,7 +204,10 @@ function generateForkliftMesh(forkliftSize: ForkliftSize, liftSize: LiftSize) {
 			1,
 			false
 		);
-		material = new THREE.MeshStandardMaterial({ color: 0x2f2a2d });
+		material = new THREE.MeshPhongMaterial({
+			color: 0x2f2a2d,
+			shininess: forkliftShininess,
+		});
 		const wheelMesh = new Mesh(geometry, material);
 		wheelMesh.name = 'wheel' + i;
 		bodyMesh.add(wheelMesh);

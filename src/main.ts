@@ -12,7 +12,7 @@ window.addEventListener('resize', () => {
 });
 
 const camera = new THREE.PerspectiveCamera(
-	75,
+	65,
 	window.innerWidth / window.innerHeight,
 	0.1,
 	1000
@@ -22,33 +22,43 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 const orbitControls = new OrbitControls(camera, renderer.domElement);
+orbitControls.screenSpacePanning = true;
 
 const sceneBuilder = getSceneBuilder(camera);
 
 const { scene, forklift, hangar, printer } = sceneBuilder.initialize();
 
+type ControllerDef = {
+	pressed: boolean;
+	callback: Function;
+};
+
+function controllerOf(cb: Function): ControllerDef {
+	return { pressed: false, callback: cb };
+}
+
 const controls = {
-	a: { pressed: false, callback: forklift.turnLeft.bind(forklift) },
-	d: { pressed: false, callback: forklift.turnRight.bind(forklift) },
-	w: { pressed: false, callback: forklift.accelerate.bind(forklift) },
-	s: { pressed: false, callback: forklift.decelerate.bind(forklift) },
-	c: { pressed: false, callback: sceneBuilder.switchCamera.bind(sceneBuilder) },
-	'1': {
-		pressed: false,
-		callback: () => {
-			sceneBuilder.setGlobalCamera();
-			orbitControls.enabled = true;
-		},
-	},
-	'2': {
-		pressed: false,
-		callback: () => {
-			orbitControls.enabled = false;
-			sceneBuilder.setThirdPersonCamera();
-		},
-	},
-	u: { pressed: false, callback: forklift.liftUp.bind(forklift) },
-	j: { pressed: false, callback: forklift.liftDown.bind(forklift) },
+	a: controllerOf(forklift.turnLeft.bind(forklift)),
+	d: controllerOf(forklift.turnRight.bind(forklift)),
+	w: controllerOf(forklift.accelerate.bind(forklift)),
+	s: controllerOf(forklift.decelerate.bind(forklift)),
+	c: controllerOf(sceneBuilder.switchCamera.bind(sceneBuilder)),
+	'1': controllerOf(() => {
+		sceneBuilder.setGlobalCamera();
+		orbitControls.enabled = true;
+	}),
+	'2': controllerOf(() => {
+		orbitControls.enabled = false;
+		sceneBuilder.setThirdPersonCamera();
+	}),
+	q: controllerOf(forklift.liftUp.bind(forklift)),
+	e: controllerOf(forklift.liftDown.bind(forklift)),
+	u: controllerOf(() => {
+		printer.generateFigure('A2', 5, 1 * Math.PI);
+	}),
+	g: controllerOf(() => {
+		forklift.takeFigure(printer);
+	}),
 };
 
 Object.entries(controls).forEach(value =>
