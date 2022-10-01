@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { Curve, Mesh, Object3D, Vector2, Vector3 } from 'three';
 
-export type FigureName = 'A1' | 'A2' | 'A3' | 'A4' | 'B1' | 'B2' | 'B3' | 'B4';
+export const figureNames = ['A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4'];
+export type FigureName = typeof figureNames[number];
 
 type CurveType = 'bezier' | 'spline';
 

@@ -52,6 +52,11 @@ export class Printer extends BoxShape {
 	getFigure() {
 		return this.figure;
 	}
+	deleteFigure() {
+		if (!this.figure) return;
+		this.mesh.remove(this.figure);
+		this.figure = undefined;
+	}
 }
 
 function createPrinter(position: Vector2, size: PrinterSize) {

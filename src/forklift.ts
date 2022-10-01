@@ -152,6 +152,11 @@ export class Forklift extends BoxShape implements Moving {
 		this.figure.rotateX(Math.PI / 2);
 		lift.add(this.figure);
 	}
+	deleteFigure() {
+		if (!this.figure) return;
+		this.getLift()!.remove(this.figure);
+		this.figure = undefined;
+	}
 }
 
 function createForklift(properties: ForkliftProperties) {
