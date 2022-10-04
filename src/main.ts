@@ -5,8 +5,8 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import keyController from './keyControlls';
 import CollisionManager from './collisionManager';
 import { GUI } from 'dat.gui';
-import { FigureName, figureNames } from './figures';
-import { BoxGeometry, Mesh, MeshPhongMaterial, Vector3 } from 'three';
+import { FigureName } from './figures';
+import { ColorRepresentation } from 'three';
 
 type ControllerDef = {
 	pressed: boolean;
@@ -24,6 +24,7 @@ const guiController = {
 		figure: 'A1' as FigureName,
 		torsionAngle: 0 as number,
 		figureHeight: 10 as number,
+		figureColor: '#a970ff' as ColorRepresentation,
 	},
 };
 let usedFigureNames: FigureName[] = guiController.printer.revolutionFigureNames;
@@ -71,8 +72,6 @@ setUpGUI();
 sceneBuilder.setGlobalCamera();
 
 setUpKeyControls();
-const printFreq = 100;
-var printCount = 0;
 
 function animate() {
 	requestAnimationFrame(animate);
@@ -81,11 +80,6 @@ function animate() {
 
 	updater.updateAll();
 
-	if (printCount++ % printFreq == 0) {
-		console.log(forklift.position);
-		const figurePos = forklift.computeFigureGlobalPosition();
-		if (figurePos) console.log(`Figure: ${JSON.stringify(figurePos)}`);
-	}
 	renderer.render(scene, camera);
 }
 
@@ -116,7 +110,10 @@ function setUpKeyControls() {
 			printer.generateFigure(
 				guiController.printer.figure,
 				guiController.printer.figureHeight,
-				guiController.printer.torsionAngle
+				guiController.printer.torsionAngle,
+				{
+					color: guiController.printer.figureColor,
+				}
 			);
 		}),
 		g: controllerOf(() => {
@@ -174,6 +171,7 @@ function setUpGUI() {
 		2 * Math.PI,
 		0.01
 	);
+	printerFolder.addColor(guiController.printer, 'figureColor');
 	printerFolder.add(guiController.printer, 'figureHeight', 0, 20, 0.5);
 
 	let figureController = printerFolder.add(

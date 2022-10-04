@@ -1,5 +1,6 @@
 import {
 	BoxGeometry,
+	ColorRepresentation,
 	Mesh,
 	MeshStandardMaterial,
 	Object3D,
@@ -26,7 +27,8 @@ export class Printer extends BoxShape {
 	generateFigure(
 		type: FigureName,
 		height: number,
-		extrusionAngle: number = 0
+		extrusionAngle: number = 0,
+		{ color }: { color?: ColorRepresentation } = {}
 	): void {
 		if (this.figure) return;
 
@@ -34,21 +36,19 @@ export class Printer extends BoxShape {
 		let sizeVec = new Vector3();
 		this.mesh.geometry.boundingBox!.getSize(sizeVec);
 
-		this.figure = getFigure(type, sizeVec.x * 0.8, height, extrusionAngle);
+		this.figure = getFigure(
+			type,
+			sizeVec.x * 0.8,
+			height,
+			extrusionAngle,
+			color
+		);
 		this.figure.name = 'figure';
 
 		this.figure.position.set(0, this.height / 2, 0);
 
 		this.mesh.add(this.figure);
 	}
-	// giveFigure() {
-	// 	if (!this.figure) return undefined;
-	// 	this.mesh.remove(this.figure);
-
-	// 	const notMyFigureAnymore = this.figure.clone();
-	// 	this.figure = undefined;
-	// 	return notMyFigureAnymore;
-	// }
 	giveFigure(getter: (fig: Object3D) => boolean): void {
 		if (!this.figure) return undefined;
 

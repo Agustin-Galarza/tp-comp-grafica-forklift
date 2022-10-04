@@ -29,6 +29,7 @@ export type ForkliftProperties = {
 	liftSensitivity: number;
 	size: ForkliftSize;
 	liftSize: LiftSize;
+	captureThreshold?: number;
 };
 
 export type ForkliftType = { new (): Forklift };
@@ -49,24 +50,31 @@ export class Forklift extends BoxShape implements Moving {
 	private deltaMovement: number = 0;
 	private figure: Object3D | undefined;
 	private captureThreshold;
-	constructor(properties: ForkliftProperties, captureThreshold = 15) {
+	constructor({
+		turnSensitivity,
+		speed,
+		liftSensitivity,
+		size,
+		liftSize,
+		captureThreshold = 15,
+	}: ForkliftProperties) {
 		super(
 			new Vector2(),
 			new Orientation(),
-			properties.size.width,
-			properties.size.height,
-			properties.size.length + properties.liftSize.length
+			size.width,
+			size.height,
+			size.length + liftSize.length
 		);
-		this.liftSize = properties.liftSize;
+		this.liftSize = liftSize;
 		this.liftRange = {
 			top: (this.height * 5) / 2,
 			bottom: -this.height / 2 + this.liftSize.height / 2,
 		};
-		this.speed = properties.speed;
+		this.speed = speed;
 		this.hangar = getHangar()!;
-		this.mesh = generateForkliftMesh(properties.size, properties.liftSize);
-		this.turnSensitivity = properties.turnSensitivity;
-		this.liftSensitivity = properties.liftSensitivity;
+		this.mesh = generateForkliftMesh(size, liftSize);
+		this.turnSensitivity = turnSensitivity;
+		this.liftSensitivity = liftSensitivity;
 		this.figure = undefined;
 		this.captureThreshold = captureThreshold;
 	}

@@ -20,12 +20,13 @@ const CONSTANTS = {
 			turnSensitivity: 0.05,
 			speed: 0.4,
 			size: {
-				length: 10,
-				width: 5,
+				length: 12,
+				width: 7,
 				height: 5,
 			},
 			liftSensitivity: 0.1,
 			liftSize: { height: 0.3, length: 4 },
+			captureThreshold: 15,
 		} as ForkliftProperties,
 	},
 	camera: {
