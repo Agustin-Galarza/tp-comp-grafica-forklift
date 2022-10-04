@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {
+	AxesHelper,
 	ColorRepresentation,
 	Curve,
 	Mesh,
@@ -64,6 +65,7 @@ export function getFigure(
 		const points = getShapePoints(fig);
 		figureObject = getSimpleLatheMesh(points, color);
 	}
+	figureObject.add(new AxesHelper(5));
 	return figureObject;
 }
 
@@ -72,7 +74,6 @@ function getSimpleLatheMesh(
 	color: ColorRepresentation
 ): Mesh {
 	const geometry = new THREE.LatheBufferGeometry(points, 50);
-
 	const material = new THREE.MeshPhongMaterial({
 		color,
 		shininess: 32,

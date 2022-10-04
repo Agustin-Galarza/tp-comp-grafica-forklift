@@ -68,7 +68,8 @@ export class Shelves extends BoxShape {
 			baseHeight?: number;
 		}
 	) {
-		const height = baseHeight + vSections * sectionSize.height;
+		const height =
+			baseHeight + vSections * sectionSize.height + (vSections + 1) * 0.7;
 		const width = hSections * sectionSize.width;
 		const depth = sectionSize.depth;
 		super(position, orientation, width, height, depth);
@@ -95,7 +96,7 @@ export class Shelves extends BoxShape {
 		const planksDepth = this.depth + 2 * this.plankOverhang;
 		const planksHeightSeparation = this.sections.size.height + this.plankHeight;
 
-		const poleHeight = this.height + planksAmount * this.plankHeight;
+		const poleHeight = this.height;
 
 		// generate poles
 		let base: Mesh;
@@ -217,9 +218,10 @@ export class Shelves extends BoxShape {
 		const width = (xPos + 0.5) * this.sections.size.width;
 
 		const height =
-			this.baseHeight +
-			(yPos + 1) * (this.plankHeight + this.sections.size.height) -
-			this.height;
+			this.baseHeight -
+			this.height / 2 +
+			((yPos + 1) * this.plankHeight) / 2 +
+			yPos * this.sections.size.height;
 		return new Vector3(width, depth, height);
 	}
 	// private toShelvesPosition(position: Vector3){
