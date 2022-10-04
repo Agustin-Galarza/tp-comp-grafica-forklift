@@ -1,4 +1,12 @@
-import { Mesh, Object3D, Vector2, Vector3 } from 'three';
+import {
+	BoxGeometry,
+	Mesh,
+	MeshPhongMaterial,
+	Object3D,
+	TorusGeometry,
+	Vector2,
+	Vector3,
+} from 'three';
 import { getHangar, Hangar } from './hangar';
 
 import * as THREE from 'three';
@@ -67,12 +75,12 @@ export class Forklift extends BoxShape implements Moving {
 		);
 		this.liftSize = liftSize;
 		this.liftRange = {
-			top: (this.height * 5) / 2,
+			top: (this.height * 7) / 2,
 			bottom: -this.height / 2 + this.liftSize.height / 2,
 		};
 		this.speed = speed;
 		this.hangar = getHangar()!;
-		this.mesh = generateForkliftMesh(size, liftSize);
+		this.mesh = generateForkliftMesh(size, liftSize, this.liftRange);
 		this.turnSensitivity = turnSensitivity;
 		this.liftSensitivity = liftSensitivity;
 		this.figure = undefined;
@@ -202,7 +210,11 @@ function createForklift(properties: ForkliftProperties) {
 	return new Forklift(properties);
 }
 
-function generateForkliftMesh(forkliftSize: ForkliftSize, liftSize: LiftSize) {
+function generateForkliftMesh(
+	forkliftSize: ForkliftSize,
+	liftSize: LiftSize,
+	liftRange: LiftRange
+) {
 	//body
 	let geometry: THREE.BufferGeometry = new THREE.BoxGeometry(
 		forkliftSize.width,
@@ -219,10 +231,11 @@ function generateForkliftMesh(forkliftSize: ForkliftSize, liftSize: LiftSize) {
 	const bodyMesh = getOwnModel(forkliftSize, liftSize);
 
 	//lift
+	const poleSize = liftSize.length * 0.15;
 	geometry = new THREE.BoxGeometry(
 		forkliftSize.width,
 		liftSize.height,
-		liftSize.length
+		liftSize.length - poleSize
 	);
 	geometry.rotateX(Math.PI / 2);
 	geometry.rotateZ(Math.PI / 2);
@@ -233,24 +246,66 @@ function generateForkliftMesh(forkliftSize: ForkliftSize, liftSize: LiftSize) {
 	const liftMesh = new Mesh(geometry, material);
 	liftMesh.name = 'lift';
 	bodyMesh.add(liftMesh);
-	liftMesh.translateX(forkliftSize.length / 2 + liftSize.length / 2);
+	liftMesh.translateX(
+		forkliftSize.length / 2 + liftSize.length / 2 + poleSize / 2
+	);
+
+	// / poles
+	const poleHeight = (liftRange.top - liftRange.bottom) * 1.1;
+	geometry = new BoxGeometry(poleSize, poleHeight, poleSize);
+	material = new MeshPhongMaterial({
+		color: 0x9eb1b8,
+		shininess: forkliftShininess * 2,
+	});
+	let poleMesh = new Mesh(geometry, material);
+	poleMesh.rotateX(-Math.PI / 2);
+	bodyMesh.add(poleMesh);
+	poleMesh.translateX(forkliftSize.length / 2 + poleSize / 2);
+	poleMesh.translateY(-poleHeight / 2 - liftRange.bottom * 1.2);
+	poleMesh.translateZ((-forkliftSize.width / 2) * 0.6);
+
+	poleMesh = new Mesh(geometry, material);
+	poleMesh.rotateX(-Math.PI / 2);
+	bodyMesh.add(poleMesh);
+	poleMesh.translateX(forkliftSize.length / 2 + poleSize / 2);
+	poleMesh.translateY(-poleHeight / 2 - liftRange.bottom * 1.2);
+	poleMesh.translateZ((forkliftSize.width / 2) * 0.6);
+
+	geometry = new BoxGeometry(
+		poleSize * 1.1,
+		forkliftSize.width,
+		poleSize * 1.1
+	);
+	material = new MeshPhongMaterial({
+		color: 0x323334,
+		shininess: forkliftShininess * 0.5,
+	});
+	poleMesh = new Mesh(geometry, material);
+	bodyMesh.add(poleMesh);
+	poleMesh.translateX(forkliftSize.length / 2 + poleSize / 2);
+
+	poleMesh = new Mesh(geometry, material);
+	bodyMesh.add(poleMesh);
+	poleMesh.translateX(forkliftSize.length / 2 + poleSize / 2);
+	poleMesh.translateZ(poleHeight * 0.5);
 
 	//wheels
 	const wheelSize = {
 		radius: forkliftSize.length / 6,
-		width: 0.4,
+		width: 0.6,
 	};
 	for (let i = 0; i < 4; i++) {
+		const radialSegments = 14;
 		geometry = new THREE.CylinderGeometry(
 			wheelSize.radius,
 			wheelSize.radius,
 			wheelSize.width,
-			14,
+			radialSegments,
 			1,
 			false
 		);
 		material = new THREE.MeshPhongMaterial({
-			color: 0x2f2a2d,
+			color: 0xafaaad,
 			shininess: forkliftShininess,
 		});
 		const wheelMesh = new Mesh(geometry, material);
@@ -262,7 +317,58 @@ function generateForkliftMesh(forkliftSize: ForkliftSize, liftSize: LiftSize) {
 			(i % 2 == 0 ? 1 : -1) * (forkliftSize.width / 2 + wheelSize.width / 2)
 		);
 		wheelMesh.translateZ(-forkliftSize.height / 2);
+
+		const tireWidth = wheelSize.width * 0.8;
+		geometry = new TorusGeometry(
+			wheelSize.radius,
+			tireWidth,
+			radialSegments,
+			10
+		);
+		material = new MeshPhongMaterial({
+			color: 0x2f2a2d,
+			shininess: forkliftShininess,
+		});
+		const tireMesh = new Mesh(geometry, material);
+		wheelMesh.add(tireMesh);
+		tireMesh.rotateX(Math.PI / 2);
+
+		bodyMesh.translateZ(tireWidth / 10);
 	}
+
+	// seat
+	const seatWidth = forkliftSize.width * 0.6;
+	const seatDepth = 2.5;
+	const seatHeight = 6;
+	const reticule = [
+		new Vector3(-seatWidth / 2, -seatDepth / 2, 0),
+		new Vector3(-seatWidth / 2, seatDepth / 2, 0),
+		new Vector3(seatWidth / 2, -seatDepth / 2, 0),
+		new Vector3(seatWidth / 2, seatDepth / 2, 0),
+		new Vector3(-seatWidth / 2, -seatDepth / 2, seatHeight),
+		new Vector3(-seatWidth / 2, -seatDepth / 4, seatHeight),
+		new Vector3(seatWidth / 2, -seatDepth / 2, seatHeight),
+		new Vector3(seatWidth / 2, -seatDepth / 4, seatHeight),
+	];
+	const indices = [
+		0, 1, 2, 1, 3, 2, 0, 4, 5, 0, 5, 1, 0, 2, 6, 6, 4, 0, 2, 3, 6, 3, 7, 6, 3,
+		1, 7, 1, 5, 7, 4, 6, 7, 4, 7, 5,
+	];
+	let array: number[] = [];
+	indices.forEach((i, index) => reticule[i].toArray(array, 3 * index));
+	const bodyVerteces = new Float32Array(array);
+	geometry = new THREE.BufferGeometry();
+	geometry.setAttribute('position', new THREE.BufferAttribute(bodyVerteces, 3));
+	geometry.computeVertexNormals();
+	material = new MeshPhongMaterial({
+		color: 0x2a2a2a,
+		shininess: forkliftShininess,
+	});
+	const seatMesh = new Mesh(geometry, material);
+	bodyMesh.add(seatMesh);
+	seatMesh.rotateZ(-Math.PI / 2);
+	seatMesh.translateZ(forkliftSize.height / 2);
+	seatMesh.translateY(-forkliftSize.length * 0.1);
 
 	bodyMesh.translateZ(forkliftSize.height / 2 + wheelSize.radius);
 

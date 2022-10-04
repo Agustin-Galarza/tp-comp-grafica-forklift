@@ -60,10 +60,10 @@ export function getOwnModel(forkliftSize: ForkliftSize, liftSize: LiftSize) {
 	}
 	const geometry = new THREE.BufferGeometry();
 	geometry.setAttribute('position', new THREE.BufferAttribute(bodyVerteces, 3));
-	geometry.setAttribute(
-		'normal',
-		new THREE.BufferAttribute(new Float32Array(normals), 3)
-	);
+	// geometry.setAttribute(
+	// 	'normal',
+	// 	new THREE.BufferAttribute(new Float32Array(normals), 3)
+	// );
 	const material = new THREE.MeshStandardMaterial({ color: 0xead312 });
 
 	const mesh = new THREE.Mesh(geometry, material);

@@ -17,15 +17,15 @@ import { createShelves, Shelves, Size3 } from './shelves';
 const CONSTANTS = {
 	forklift: {
 		properties: {
-			turnSensitivity: 0.05,
-			speed: 0.4,
+			turnSensitivity: 0.04,
+			speed: 0.5,
 			size: {
-				length: 12,
+				length: 15,
 				width: 7,
-				height: 5,
+				height: 4,
 			},
-			liftSensitivity: 0.1,
-			liftSize: { height: 0.3, length: 4 },
+			liftSensitivity: 0.15,
+			liftSize: { height: 0.3, length: 4.5 },
 			captureThreshold: 15,
 		} as ForkliftProperties,
 	},
@@ -111,13 +111,50 @@ function getSceneBuilder(mainCamera: THREE.PerspectiveCamera) {
 
 	function setThirdPersonCamera() {
 		scene.remove(mainCamera);
+		printer.mesh.remove(mainCamera);
+		shelves.mesh.remove(mainCamera);
 		forklift.mesh.add(mainCamera);
-		// mainCamera.position.x = -CONSTANTS.camera.distance;
-		mainCamera.position.x =
-			CONSTANTS.forklift.properties.size.length / 2 +
-			CONSTANTS.forklift.properties.liftSize.length;
+		mainCamera.position.x = -CONSTANTS.camera.distance;
 		mainCamera.position.y = 0;
 		mainCamera.position.z = CONSTANTS.camera.distance;
+		const target = new Vector3();
+		forklift.mesh.getWorldPosition(target);
+		mainCamera.lookAt(
+			target.add(
+				new Vector3(0, CONSTANTS.forklift.properties.size.height * 2, 0)
+			)
+		);
+	}
+
+	function setFirstPersonCamera() {
+		scene.remove(mainCamera);
+		printer.mesh.remove(mainCamera);
+		shelves.mesh.remove(mainCamera);
+		forklift.mesh.add(mainCamera);
+		mainCamera.position.x = 0;
+		mainCamera.position.y = 0;
+		mainCamera.position.z = CONSTANTS.forklift.properties.size.height;
+		const target = new Vector3();
+		forklift.mesh.getWorldPosition(target);
+		mainCamera.lookAt(
+			target.add(
+				new Vector3(
+					10 * Math.cos(forklift.orientation.value),
+					CONSTANTS.forklift.properties.size.height,
+					-10 * Math.sin(forklift.orientation.value)
+				)
+			)
+		);
+	}
+
+	function setLateralCamera() {
+		scene.remove(mainCamera);
+		printer.mesh.remove(mainCamera);
+		shelves.mesh.remove(mainCamera);
+		forklift.mesh.add(mainCamera);
+		mainCamera.position.x = 0;
+		mainCamera.position.y = CONSTANTS.camera.distance;
+		mainCamera.position.z = 0;
 		const target = new Vector3();
 		forklift.mesh.getWorldPosition(target);
 		mainCamera.lookAt(target);
@@ -125,14 +162,34 @@ function getSceneBuilder(mainCamera: THREE.PerspectiveCamera) {
 
 	function setGlobalCamera() {
 		forklift.mesh.remove(mainCamera);
-		// hangar.mesh.add(mainCamera);
 		mainCamera.position.x = CONSTANTS.camera.distance;
 		mainCamera.position.z = CONSTANTS.camera.distance;
 		mainCamera.position.y = CONSTANTS.camera.distance;
 		mainCamera.lookAt(0, 0, 0);
 	}
 
-	const cameraTypeNames = ['Global', 'ThirdPerson'] as const;
+	function setPrinterCamera() {
+		forklift.mesh.remove(mainCamera);
+		mainCamera.position.x = CONSTANTS.camera.distance;
+		mainCamera.position.z = CONSTANTS.camera.distance;
+		mainCamera.position.y = CONSTANTS.camera.distance;
+		const target = new Vector3();
+		printer.mesh.getWorldPosition(target);
+		mainCamera.lookAt(target);
+	}
+
+	function setShevlesCamera() {
+		forklift.mesh.remove(mainCamera);
+
+		mainCamera.position.x = CONSTANTS.camera.distance;
+		mainCamera.position.z = CONSTANTS.camera.distance;
+		mainCamera.position.y = CONSTANTS.camera.distance;
+		const target = new Vector3();
+		shelves.mesh.getWorldPosition(target);
+		mainCamera.lookAt(target);
+	}
+
+	const cameraTypeNames = ['Global', 'ThirdPerson', 'FirstPerson'] as const;
 	type CameraTypes = typeof cameraTypeNames[number];
 
 	function* cameraTypeIterator() {
@@ -150,6 +207,9 @@ function getSceneBuilder(mainCamera: THREE.PerspectiveCamera) {
 		ThirdPerson: () => {
 			setThirdPersonCamera();
 		},
+		FirstPerson: () => {
+			setFirstPersonCamera();
+		},
 	};
 
 	const cameraIterator: Generator<CameraTypes> = cameraTypeIterator();
@@ -163,6 +223,10 @@ function getSceneBuilder(mainCamera: THREE.PerspectiveCamera) {
 		setGlobalCamera,
 		setThirdPersonCamera,
 		switchCamera,
+		setFirstPersonCamera,
+		setPrinterCamera,
+		setShevlesCamera,
+		setLateralCamera,
 	};
 }
 

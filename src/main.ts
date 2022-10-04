@@ -6,7 +6,7 @@ import keyController from './keyControlls';
 import CollisionManager from './collisionManager';
 import { GUI } from 'dat.gui';
 import { FigureName } from './figures';
-import { ColorRepresentation } from 'three';
+import { ColorRepresentation, Vector3 } from 'three';
 
 type ControllerDef = {
 	pressed: boolean;
@@ -45,7 +45,7 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-const orbitControls = new OrbitControls(camera, renderer.domElement);
+let orbitControls = new OrbitControls(camera, renderer.domElement);
 orbitControls.screenSpacePanning = true;
 
 const sceneBuilder = getSceneBuilder(camera);
@@ -99,10 +99,33 @@ function setUpKeyControls() {
 		'1': controllerOf(() => {
 			sceneBuilder.setGlobalCamera();
 			orbitControls.enabled = true;
+			orbitControls.target.set(0, 0, 0);
 		}),
 		'2': controllerOf(() => {
+			sceneBuilder.setPrinterCamera();
+			orbitControls.enabled = true;
+			const target = new Vector3();
+			printer.mesh.getWorldPosition(target);
+			orbitControls.target.set(target.x, target.y, target.z);
+		}),
+		'3': controllerOf(() => {
+			sceneBuilder.setShevlesCamera();
+			orbitControls.enabled = true;
+			const target = new Vector3();
+			shelves.mesh.getWorldPosition(target);
+			orbitControls.target.set(target.x, target.y, target.z);
+		}),
+		'4': controllerOf(() => {
+			orbitControls.enabled = false;
+			sceneBuilder.setFirstPersonCamera();
+		}),
+		'5': controllerOf(() => {
 			orbitControls.enabled = false;
 			sceneBuilder.setThirdPersonCamera();
+		}),
+		'6': controllerOf(() => {
+			sceneBuilder.setLateralCamera();
+			orbitControls.enabled = false;
 		}),
 		q: controllerOf(forklift.liftUp.bind(forklift)),
 		e: controllerOf(forklift.liftDown.bind(forklift)),

@@ -65,7 +65,6 @@ export function getFigure(
 		const points = getShapePoints(fig);
 		figureObject = getSimpleLatheMesh(points, color);
 	}
-	figureObject.add(new AxesHelper(5));
 	return figureObject;
 }
 

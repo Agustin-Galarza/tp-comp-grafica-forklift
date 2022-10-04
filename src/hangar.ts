@@ -1,5 +1,13 @@
 import * as THREE from 'three';
-import { Mesh, Vector2 } from 'three';
+import {
+	BackSide,
+	BufferGeometry,
+	CylinderGeometry,
+	DoubleSide,
+	Material,
+	Mesh,
+	Vector2,
+} from 'three';
 import { Room } from './collisionManager';
 
 export type HangarSize = {
@@ -28,8 +36,13 @@ function getHangar() {
 
 function generateHangarMesh(size: HangarSize): Mesh {
 	// create floor mesh
-	let geo = new THREE.PlaneBufferGeometry(size.width, size.length, 100, 100);
-	let mat = new THREE.MeshStandardMaterial({
+	let geo: BufferGeometry = new THREE.PlaneBufferGeometry(
+		size.width,
+		size.length,
+		100,
+		100
+	);
+	let mat: Material = new THREE.MeshStandardMaterial({
 		color: 0x8b5a2b,
 	});
 	let floorMesh = new Mesh(geo, mat);
@@ -38,10 +51,36 @@ function generateHangarMesh(size: HangarSize): Mesh {
 
 	floorMesh.add(new THREE.AxesHelper(5));
 
+	// create roof
+	const roofRadius = size.height * 13;
+	const roofHeight = size.height;
+	const l = size.width / 2;
+	const roofHalfAngle = Math.atan(l / (roofRadius - roofHeight));
+	console.log(l / (roofRadius - roofHeight));
+	console.log(roofHalfAngle);
+	geo = new CylinderGeometry(
+		roofRadius,
+		roofRadius,
+		size.length,
+		100,
+		10,
+		true,
+		-roofHalfAngle,
+		roofHalfAngle * 2
+	);
+	mat = new THREE.MeshStandardMaterial({
+		color: 0xc1dbe5,
+	});
+	mat.side = DoubleSide;
+	let roofMesh = new Mesh(geo, mat);
+
+	floorMesh.add(roofMesh);
+	roofMesh.position.set(0, 0, -(roofRadius - size.height - roofHeight));
+
 	//create walls
 	for (let i = 0; i < 4; i++) {
 		let width,
-			height = size.height;
+			height = size.height + roofHeight;
 		if (i % 2 == 0) {
 			width = size.width;
 		} else {
@@ -63,7 +102,6 @@ function generateHangarMesh(size: HangarSize): Mesh {
 		}
 		wallMesh.position.z = height / 2;
 	}
-	// TODO: roof
 
 	return floorMesh;
 }

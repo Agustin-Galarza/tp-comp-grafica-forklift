@@ -1,9 +1,15 @@
 import {
 	BoxGeometry,
+	BufferGeometry,
+	CircleGeometry,
 	ColorRepresentation,
+	CylinderGeometry,
+	Material,
 	Mesh,
+	MeshPhongMaterial,
 	MeshStandardMaterial,
 	Object3D,
+	TorusGeometry,
 	Vector2,
 	Vector3,
 } from 'three';
@@ -85,10 +91,62 @@ function createPrinter(position: Vector2, size: PrinterSize) {
 }
 
 function generatePrinterMesh(size: PrinterSize) {
-	const geometry = new BoxGeometry(size.width, size.height, size.length);
-	const material = new MeshStandardMaterial({ color: 0xf28c28 });
+	const shininess = 20;
+	const radialSegments = 8;
+	const platformHeight = 0.5;
+	const poleWidth = 0.4;
+	const poleHeight = size.height + 15;
+	//create body
+	let geometry: BufferGeometry = new CylinderGeometry(
+		size.width / 2,
+		size.width / 2,
+		size.height - platformHeight,
+		radialSegments
+	);
+	let material: Material = new MeshPhongMaterial({
+		color: 0xf28c28,
+		shininess,
+	});
 	const bodyMesh = new Mesh(geometry, material);
 	bodyMesh.rotateX(Math.PI / 2);
+
+	// create platform
+	geometry = new CylinderGeometry(
+		size.width / 2 + 0.05,
+		size.width / 2 + 0.05,
+		platformHeight,
+		radialSegments
+	);
+	material = new MeshPhongMaterial({ color: 0x26afe3, shininess });
+	let _mesh = new Mesh(geometry, material);
+	bodyMesh.add(_mesh);
+	_mesh.position.set(0, size.height / 2 - platformHeight / 2, 0);
+
+	// create ring
+	const ringWidth = size.width / 20;
+	geometry = new TorusGeometry(
+		size.width / 2 - ringWidth + 0.05,
+		ringWidth,
+		3,
+		radialSegments
+	);
+	material = new MeshPhongMaterial({ color: 0x26afe3, shininess });
+	_mesh = new Mesh(geometry, material);
+	bodyMesh.add(_mesh);
+	_mesh.rotateX(Math.PI / 2);
+	_mesh.position.set(0, size.height / 2, 0);
+
+	// create pole
+	geometry = new BoxGeometry(poleWidth, poleHeight, poleWidth);
+	material = new MeshPhongMaterial({ color: 0x9eb1b8, shininess });
+	_mesh = new Mesh(geometry, material);
+	bodyMesh.add(_mesh);
+	_mesh.position.set(
+		size.width / 2 + poleWidth / 2,
+		poleHeight / 2 - size.height / 2,
+		0
+	);
+
 	return bodyMesh;
 }
 
