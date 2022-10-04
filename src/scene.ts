@@ -1,7 +1,5 @@
 import * as THREE from 'three';
 import {
-	AxesHelper,
-	BufferGeometry,
 	Mesh,
 	MeshBasicMaterial,
 	PointLight,
@@ -10,15 +8,11 @@ import {
 	Vector2,
 	Vector3,
 } from 'three';
-import {
-	createForklift,
-	Forklift,
-	ForkliftProperties,
-	ForkliftSize,
-	LiftSize,
-} from './forklift';
+import { Orientation } from './collisionManager';
+import { createForklift, Forklift, ForkliftProperties } from './forklift';
 import { createHangar, Hangar, HangarSize } from './hangar';
 import { createPrinter, Printer, PrinterSize } from './printer';
+import { createShelves, Shelves, Size3 } from './shelves';
 
 const CONSTANTS = {
 	forklift: {
@@ -26,25 +20,32 @@ const CONSTANTS = {
 			turnSensitivity: 0.05,
 			speed: 0.4,
 			size: {
-				length: 6,
-				width: 3,
-				height: 3,
+				length: 10,
+				width: 5,
+				height: 5,
 			},
-			liftSensitivity: 0.05,
-			liftSize: { height: 1, length: 2 },
+			liftSensitivity: 0.1,
+			liftSize: { height: 0.3, length: 4 },
 		} as ForkliftProperties,
-	} as const,
+	},
 	camera: {
-		distance: 20,
-	} as const,
+		distance: 40,
+	},
 	hangar: {
-		size: { width: 100, length: 100, height: 20 } as HangarSize,
-	} as const,
+		size: { width: 500, length: 500, height: 50 } as HangarSize,
+	},
 	printer: {
-		size: { width: 4, length: 4, height: 4 } as PrinterSize,
-		position: new Vector2(10, 10),
-	} as const,
-};
+		size: { width: 6, length: 6, height: 6 } as PrinterSize,
+		position: new Vector2(30, 0),
+	},
+	shelves: {
+		sectionSize: { width: 8, height: 10, depth: 10 } as Size3,
+		position: new Vector2(-40, 40),
+		oritentation: new Orientation(-Math.PI / 2),
+		baseHeight: 5,
+		captureThreshold: 20,
+	},
+} as const;
 
 // scene object that handles object creation
 // add initialize method for this
@@ -53,6 +54,7 @@ function getSceneBuilder(mainCamera: THREE.PerspectiveCamera) {
 	let hangar: Hangar;
 	let scene: Scene;
 	let printer: Printer;
+	let shelves: Shelves;
 	function initialize() {
 		scene = new THREE.Scene();
 
@@ -85,11 +87,24 @@ function getSceneBuilder(mainCamera: THREE.PerspectiveCamera) {
 		printer = createPrinter(CONSTANTS.printer.position, CONSTANTS.printer.size);
 		hangar.mesh.add(printer.mesh);
 
+		//create shelves
+		shelves = createShelves(
+			CONSTANTS.shelves.position,
+			CONSTANTS.shelves.oritentation,
+			CONSTANTS.shelves.sectionSize,
+			{
+				baseHeight: CONSTANTS.shelves.baseHeight,
+				captureThreshold: CONSTANTS.shelves.captureThreshold,
+			}
+		);
+		hangar.mesh.add(shelves.mesh);
+
 		return {
 			scene,
 			forklift,
 			hangar,
 			printer,
+			shelves,
 		};
 	}
 

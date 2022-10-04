@@ -1,5 +1,12 @@
 import * as THREE from 'three';
-import { Curve, Mesh, Object3D, Vector2, Vector3 } from 'three';
+import {
+	ColorRepresentation,
+	Curve,
+	Mesh,
+	Object3D,
+	Vector2,
+	Vector3,
+} from 'three';
 
 export const figureNames = ['A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4'];
 export type FigureName = typeof figureNames[number];
@@ -39,7 +46,8 @@ export function getFigure(
 	type: FigureName,
 	width: number,
 	height: number,
-	extrusionAngle: number = 0
+	extrusionAngle: number = 0,
+	color: ColorRepresentation = 0xa970ff
 ): Object3D {
 	const fig = figures[type];
 
@@ -48,23 +56,25 @@ export function getFigure(
 		fig.width = width;
 		fig.height = width;
 		const points = getShapePoints(fig);
-		figureObject = getSimpleExtrudeMesh(points, height, extrusionAngle);
-		figureObject.up = new Vector3(0, 0, -1);
+		figureObject = getSimpleExtrudeMesh(points, height, extrusionAngle, color);
 		figureObject.rotateX(-Math.PI / 2);
 	} else {
 		fig.width = width;
 		fig.height = height;
 		const points = getShapePoints(fig);
-		figureObject = getSimpleLatheMesh(points);
+		figureObject = getSimpleLatheMesh(points, color);
 	}
 	return figureObject;
 }
 
-function getSimpleLatheMesh(points: Vector2[]): Mesh {
+function getSimpleLatheMesh(
+	points: Vector2[],
+	color: ColorRepresentation
+): Mesh {
 	const geometry = new THREE.LatheBufferGeometry(points, 50);
 
 	const material = new THREE.MeshPhongMaterial({
-		color: 0xff4444,
+		color,
 		shininess: 32,
 		side: THREE.DoubleSide,
 	});
@@ -100,7 +110,8 @@ function twistMesh(mesh: Mesh, angle: number, height: number): Mesh {
 function getSimpleExtrudeMesh(
 	points: Vector2[],
 	height: number,
-	angle: number
+	angle: number,
+	color: ColorRepresentation
 ): Mesh {
 	const shape = new THREE.Shape(points);
 
@@ -113,7 +124,7 @@ function getSimpleExtrudeMesh(
 	const geometry = new THREE.ExtrudeBufferGeometry(shape, extrudeSettings);
 	geometry.center();
 	const material = new THREE.MeshPhongMaterial({
-		color: 0x447744,
+		color,
 		shininess: 32,
 	});
 	const mesh = new THREE.Mesh(geometry, material);

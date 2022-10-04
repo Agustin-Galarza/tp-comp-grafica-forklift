@@ -1,9 +1,10 @@
-import { Mesh, Object3D, Vector2 } from 'three';
+import { Mesh, Object3D, Vector2, Vector3 } from 'three';
 import { getHangar, Hangar } from './hangar';
 
 import * as THREE from 'three';
 import { AABB, BoxShape, Moving, Orientation } from './collisionManager';
 import { Printer } from './printer';
+import { getOwnModel } from './forkliftOwnModel';
 
 const forkliftShininess = 50;
 type LiftRange = {
@@ -47,7 +48,8 @@ export class Forklift extends BoxShape implements Moving {
 	private hangar: Hangar;
 	private deltaMovement: number = 0;
 	private figure: Object3D | undefined;
-	constructor(properties: ForkliftProperties) {
+	private captureThreshold;
+	constructor(properties: ForkliftProperties, captureThreshold = 15) {
 		super(
 			new Vector2(),
 			new Orientation(),
@@ -57,7 +59,7 @@ export class Forklift extends BoxShape implements Moving {
 		);
 		this.liftSize = properties.liftSize;
 		this.liftRange = {
-			top: (this.height * 3) / 2,
+			top: (this.height * 5) / 2,
 			bottom: -this.height / 2 + this.liftSize.height / 2,
 		};
 		this.speed = properties.speed;
@@ -66,6 +68,7 @@ export class Forklift extends BoxShape implements Moving {
 		this.turnSensitivity = properties.turnSensitivity;
 		this.liftSensitivity = properties.liftSensitivity;
 		this.figure = undefined;
+		this.captureThreshold = captureThreshold;
 	}
 	getPosition() {
 		return this.position;
@@ -137,13 +140,17 @@ export class Forklift extends BoxShape implements Moving {
 			wheel.rotateY((reverse ? -1 : 1) * 0.1);
 		}
 	}
-	takeFigure(printer: Printer) {
-		if (this.figure) return;
-		this.figure = printer.giveFigure();
-		if (!this.figure) return;
+	takeFigure(object: Object3D): boolean {
+		if (this.figure) return false;
 
 		const lift = this.getLift()!;
+		let vec = new Vector3();
+		lift.getWorldPosition(vec);
+		const liftPosition = this.worldPositionToHangarPosition(vec);
+		if (liftPosition.distanceTo(object.position) > this.captureThreshold)
+			return false;
 
+		this.figure = object;
 		const xPosition = 0;
 		const yPosition = 0;
 		const zPosition = this.liftSize.height / 2;
@@ -151,6 +158,30 @@ export class Forklift extends BoxShape implements Moving {
 
 		this.figure.rotateX(Math.PI / 2);
 		lift.add(this.figure);
+		return true;
+	}
+	private worldPositionToHangarPosition(pos: Vector3): Vector3 {
+		return new Vector3(pos.x, -pos.z, pos.y);
+	}
+	getFigure(): Object3D | undefined {
+		return this.figure;
+	}
+	computeFigureGlobalPosition() {
+		if (!this.figure) return undefined;
+		let vec = new Vector3();
+		this.getLift()!.getWorldPosition(vec);
+		return this.worldPositionToHangarPosition(vec).add(this.figure.position);
+	}
+	giveFigure(getter: (fig: Object3D) => boolean): void {
+		if (!this.figure) return undefined;
+
+		const newFigPos = this.computeFigureGlobalPosition()!;
+		const newFig = this.figure.clone();
+		newFig.position.set(newFigPos.x, newFigPos.y, newFigPos.z);
+		if (getter(newFig)) {
+			this.deleteFigure();
+			return;
+		}
 	}
 	deleteFigure() {
 		if (!this.figure) return;
@@ -176,7 +207,8 @@ function generateForkliftMesh(forkliftSize: ForkliftSize, liftSize: LiftSize) {
 		color: 0xfdda0d,
 		shininess: forkliftShininess,
 	});
-	const bodyMesh = new THREE.Mesh(geometry, material);
+	// const bodyMesh = new THREE.Mesh(geometry, material);
+	const bodyMesh = getOwnModel(forkliftSize, liftSize);
 
 	//lift
 	geometry = new THREE.BoxGeometry(

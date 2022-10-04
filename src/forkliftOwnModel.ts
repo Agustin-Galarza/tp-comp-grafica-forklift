@@ -5,31 +5,34 @@ export function getOwnModel(forkliftSize: ForkliftSize, liftSize: LiftSize) {
 	const l = forkliftSize.length / 2,
 		w = forkliftSize.width / 2,
 		h = forkliftSize.height / 2;
+
+	const bevelLenRatio = l / 1.5;
+	const bevelHeightRatio = h / 1.7;
 	const reticule = [
-		new THREE.Vector3(-l / 2, -w, -h),
-		new THREE.Vector3(-l, -w, -h / 2),
-		new THREE.Vector3(-l, -w, h / 2),
-		new THREE.Vector3(-l / 2, -w, h),
-		new THREE.Vector3(l / 2, -w, h),
-		new THREE.Vector3(l, -w, h / 2),
-		new THREE.Vector3(l, -w, -h / 2),
-		new THREE.Vector3(l / 2, -w, -h),
-		new THREE.Vector3(-l / 2, w, -h),
-		new THREE.Vector3(-l, w, -h / 2),
-		new THREE.Vector3(-l, w, h / 2),
-		new THREE.Vector3(-l / 2, w, h),
-		new THREE.Vector3(l / 2, w, h),
-		new THREE.Vector3(l, w, h / 2),
-		new THREE.Vector3(l, w, -h / 2),
-		new THREE.Vector3(l / 2, w, -h),
-		new THREE.Vector3(-l / 2, -w, h / 2),
-		new THREE.Vector3(l / 2, -w, h / 2),
-		new THREE.Vector3(-l / 2, -w, -h / 2),
-		new THREE.Vector3(l / 2, -w, -h / 2),
-		new THREE.Vector3(-l / 2, w, h / 2),
-		new THREE.Vector3(l / 2, w, h / 2),
-		new THREE.Vector3(-l / 2, w, -h / 2),
-		new THREE.Vector3(l / 2, w, -h / 2),
+		new THREE.Vector3(-bevelLenRatio, -w, -h),
+		new THREE.Vector3(-l, -w, -bevelHeightRatio),
+		new THREE.Vector3(-l, -w, bevelHeightRatio),
+		new THREE.Vector3(-bevelLenRatio, -w, h),
+		new THREE.Vector3(bevelLenRatio, -w, h),
+		new THREE.Vector3(l, -w, bevelHeightRatio),
+		new THREE.Vector3(l, -w, -bevelHeightRatio),
+		new THREE.Vector3(bevelLenRatio, -w, -h),
+		new THREE.Vector3(-bevelLenRatio, w, -h),
+		new THREE.Vector3(-l, w, -bevelHeightRatio),
+		new THREE.Vector3(-l, w, bevelHeightRatio),
+		new THREE.Vector3(-bevelLenRatio, w, h),
+		new THREE.Vector3(bevelLenRatio, w, h),
+		new THREE.Vector3(l, w, bevelHeightRatio),
+		new THREE.Vector3(l, w, -bevelHeightRatio),
+		new THREE.Vector3(bevelLenRatio, w, -h),
+		new THREE.Vector3(-bevelLenRatio, -w, bevelHeightRatio),
+		new THREE.Vector3(bevelLenRatio, -w, bevelHeightRatio),
+		new THREE.Vector3(-bevelLenRatio, -w, -bevelHeightRatio),
+		new THREE.Vector3(bevelLenRatio, -w, -bevelHeightRatio),
+		new THREE.Vector3(-bevelLenRatio, w, bevelHeightRatio),
+		new THREE.Vector3(bevelLenRatio, w, bevelHeightRatio),
+		new THREE.Vector3(-bevelLenRatio, w, -bevelHeightRatio),
+		new THREE.Vector3(bevelLenRatio, w, -bevelHeightRatio),
 	];
 	const normals: number[] = [];
 	const indices = [
@@ -61,7 +64,9 @@ export function getOwnModel(forkliftSize: ForkliftSize, liftSize: LiftSize) {
 		'normal',
 		new THREE.BufferAttribute(new Float32Array(normals), 3)
 	);
-	const material = new THREE.MeshStandardMaterial();
+	const material = new THREE.MeshStandardMaterial({ color: 0xead312 });
 
-	return new THREE.Mesh(geometry, material);
+	const mesh = new THREE.Mesh(geometry, material);
+	mesh.geometry.computeVertexNormals();
+	return mesh;
 }

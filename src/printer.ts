@@ -41,13 +41,32 @@ export class Printer extends BoxShape {
 
 		this.mesh.add(this.figure);
 	}
-	giveFigure() {
-		if (!this.figure) return undefined;
-		this.mesh.remove(this.figure);
+	// giveFigure() {
+	// 	if (!this.figure) return undefined;
+	// 	this.mesh.remove(this.figure);
 
-		const notMyFigureAnymore = this.figure.clone();
-		this.figure = undefined;
-		return notMyFigureAnymore;
+	// 	const notMyFigureAnymore = this.figure.clone();
+	// 	this.figure = undefined;
+	// 	return notMyFigureAnymore;
+	// }
+	giveFigure(getter: (fig: Object3D) => boolean): void {
+		if (!this.figure) return undefined;
+
+		const newFigPos = this.computeFigureGlobalPosition()!;
+		const newFig = this.figure.clone();
+		newFig.position.set(newFigPos.x, newFigPos.y, newFigPos.z);
+		if (getter(newFig)) {
+			this.deleteFigure();
+			return;
+		}
+	}
+	computeFigureGlobalPosition() {
+		if (!this.figure) return undefined;
+		return new Vector3(
+			this.position.x,
+			this.position.y,
+			this.figure.position.z
+		);
 	}
 	getFigure() {
 		return this.figure;

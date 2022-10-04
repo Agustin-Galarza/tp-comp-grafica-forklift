@@ -6,6 +6,7 @@ import keyController from './keyControlls';
 import CollisionManager from './collisionManager';
 import { GUI } from 'dat.gui';
 import { FigureName, figureNames } from './figures';
+import { BoxGeometry, Mesh, MeshPhongMaterial, Vector3 } from 'three';
 
 type ControllerDef = {
 	pressed: boolean;
@@ -48,9 +49,14 @@ orbitControls.screenSpacePanning = true;
 
 const sceneBuilder = getSceneBuilder(camera);
 
-const { scene, forklift, hangar, printer } = sceneBuilder.initialize();
+const { scene, forklift, hangar, printer, shelves } = sceneBuilder.initialize();
 
-const collisionManager = new CollisionManager(forklift, hangar, printer);
+const collisionManager = new CollisionManager(
+	forklift,
+	hangar,
+	printer,
+	shelves
+);
 
 const updater = getUpdater();
 registerEvent(() => {
@@ -65,6 +71,8 @@ setUpGUI();
 sceneBuilder.setGlobalCamera();
 
 setUpKeyControls();
+const printFreq = 100;
+var printCount = 0;
 
 function animate() {
 	requestAnimationFrame(animate);
@@ -73,6 +81,11 @@ function animate() {
 
 	updater.updateAll();
 
+	if (printCount++ % printFreq == 0) {
+		console.log(forklift.position);
+		const figurePos = forklift.computeFigureGlobalPosition();
+		if (figurePos) console.log(`Figure: ${JSON.stringify(figurePos)}`);
+	}
 	renderer.render(scene, camera);
 }
 
@@ -107,11 +120,23 @@ function setUpKeyControls() {
 			);
 		}),
 		g: controllerOf(() => {
-			forklift.takeFigure(printer);
+			forklift.giveFigure(shelves.addObject.bind(shelves));
+			printer.giveFigure(forklift.takeFigure.bind(forklift));
 		}),
 		Backspace: controllerOf(() => {
 			forklift.deleteFigure();
 			printer.deleteFigure();
+		}),
+		o: controllerOf(() => {
+			camera.zoom += 0.02;
+			camera.updateProjectionMatrix();
+			console.log(camera.zoom);
+		}),
+		p: controllerOf(() => {
+			camera.zoom -= 0.02;
+			if (camera.zoom <= 0.1) camera.zoom = 0.1;
+			camera.updateProjectionMatrix();
+			console.log(camera.zoom);
 		}),
 	};
 

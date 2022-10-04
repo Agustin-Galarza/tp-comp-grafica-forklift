@@ -71,6 +71,9 @@ export default class CollisionManager<T extends BoxShape & Moving> {
 
 export class Orientation {
 	private _val: number = 0;
+	constructor(angle: number = 0) {
+		this.value = angle;
+	}
 	set value(val: number) {
 		while (val < 0) {
 			val += 2 * Math.PI;
