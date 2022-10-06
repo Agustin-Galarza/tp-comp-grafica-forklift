@@ -14,7 +14,7 @@ import { createHangar, Hangar, HangarSize } from './hangar';
 import { createPrinter, Printer, PrinterSize } from './printer';
 import { createShelves, Shelves, Size3 } from './shelves';
 
-const CONSTANTS = {
+export const CONSTANTS = {
 	forklift: {
 		properties: {
 			turnSensitivity: 0.04,
@@ -40,7 +40,7 @@ const CONSTANTS = {
 		position: new Vector2(30, 0),
 	},
 	shelves: {
-		sectionSize: { width: 8, height: 10, depth: 10 } as Size3,
+		sectionSize: { width: 8, height: 15, depth: 10 } as Size3,
 		position: new Vector2(-40, 40),
 		oritentation: new Orientation(-Math.PI / 2),
 		baseHeight: 5,
@@ -85,7 +85,11 @@ function getSceneBuilder(mainCamera: THREE.PerspectiveCamera) {
 		hangar.mesh.add(forklift.mesh);
 
 		//create printer
-		printer = createPrinter(CONSTANTS.printer.position, CONSTANTS.printer.size);
+		printer = createPrinter(
+			CONSTANTS.printer.position,
+			CONSTANTS.printer.size,
+			CONSTANTS.shelves.sectionSize.height
+		);
 		hangar.mesh.add(printer.mesh);
 
 		//create shelves
@@ -242,4 +246,4 @@ function addRoomLight(scene: Scene, position: Vector3) {
 	scene.add(roomLigtMesh);
 }
 
-export { getSceneBuilder };
+export { getSceneBuilder, CONSTANTS as ShelveConstants };

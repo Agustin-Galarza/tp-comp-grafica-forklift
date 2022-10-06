@@ -1,4 +1,4 @@
-import { getSceneBuilder } from './scene';
+import { getSceneBuilder, ShelveConstants } from './scene';
 import * as THREE from 'three';
 import { getUpdater, registerEvent } from './updater';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
@@ -43,6 +43,7 @@ const camera = new THREE.PerspectiveCamera(
 );
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.localClippingEnabled = true;
 document.body.appendChild(renderer.domElement);
 
 let orbitControls = new OrbitControls(camera, renderer.domElement);
@@ -195,7 +196,13 @@ function setUpGUI() {
 		0.01
 	);
 	printerFolder.addColor(guiController.printer, 'figureColor');
-	printerFolder.add(guiController.printer, 'figureHeight', 0, 20, 0.5);
+	printerFolder.add(
+		guiController.printer,
+		'figureHeight',
+		0,
+		ShelveConstants.shelves.sectionSize.height,
+		0.5
+	);
 
 	let figureController = printerFolder.add(
 		guiController.printer,

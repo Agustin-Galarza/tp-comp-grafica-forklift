@@ -5,6 +5,7 @@ import {
 	Curve,
 	Mesh,
 	Object3D,
+	Plane,
 	Vector2,
 	Vector3,
 } from 'three';
@@ -48,7 +49,8 @@ export function getFigure(
 	width: number,
 	height: number,
 	extrusionAngle: number = 0,
-	color: ColorRepresentation = 0xa970ff
+	color: ColorRepresentation = 0xa970ff,
+	clippingPlane: Plane
 ): Object3D {
 	const fig = figures[type];
 
@@ -57,26 +59,34 @@ export function getFigure(
 		fig.width = width;
 		fig.height = width;
 		const points = getShapePoints(fig);
-		figureObject = getSimpleExtrudeMesh(points, height, extrusionAngle, color);
+		figureObject = getSimpleExtrudeMesh(
+			points,
+			height,
+			extrusionAngle,
+			color,
+			clippingPlane
+		);
 		figureObject.rotateX(-Math.PI / 2);
 	} else {
 		fig.width = width;
 		fig.height = height;
 		const points = getShapePoints(fig);
-		figureObject = getSimpleLatheMesh(points, color);
+		figureObject = getSimpleLatheMesh(points, color, clippingPlane);
 	}
 	return figureObject;
 }
 
 function getSimpleLatheMesh(
 	points: Vector2[],
-	color: ColorRepresentation
+	color: ColorRepresentation,
+	clippingPlane: Plane
 ): Mesh {
 	const geometry = new THREE.LatheBufferGeometry(points, 50);
 	const material = new THREE.MeshPhongMaterial({
 		color,
 		shininess: 32,
 		side: THREE.DoubleSide,
+		clippingPlanes: [clippingPlane],
 	});
 	const mesh = new THREE.Mesh(geometry, material);
 	return mesh;
@@ -111,7 +121,8 @@ function getSimpleExtrudeMesh(
 	points: Vector2[],
 	height: number,
 	angle: number,
-	color: ColorRepresentation
+	color: ColorRepresentation,
+	clippingPlane: Plane
 ): Mesh {
 	const shape = new THREE.Shape(points);
 
@@ -126,6 +137,7 @@ function getSimpleExtrudeMesh(
 	const material = new THREE.MeshPhongMaterial({
 		color,
 		shininess: 32,
+		clippingPlanes: [clippingPlane],
 	});
 	const mesh = new THREE.Mesh(geometry, material);
 	twistMesh(mesh, angle, height);

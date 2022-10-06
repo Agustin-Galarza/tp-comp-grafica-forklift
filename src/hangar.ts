@@ -43,7 +43,7 @@ function generateHangarMesh(size: HangarSize): Mesh {
 		100
 	);
 	let mat: Material = new THREE.MeshStandardMaterial({
-		color: 0x8b5a2b,
+		color: 0x826f57,
 	});
 	let floorMesh = new Mesh(geo, mat);
 
