@@ -176,6 +176,6 @@ export abstract class Room extends BoxShape {
 			yMin: -this.depth / 2,
 		};
 	}
-	//@ts-ignore
+	// @ts-ignore
 	rotate(angle: number): void {}
 }

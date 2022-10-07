@@ -18,8 +18,7 @@ import { BoxShape, Orientation } from './collisionManager';
 import { FigureName, getFigure } from './figures';
 
 export type PrinterSize = {
-	width: number;
-	length: number;
+	radius: number;
 	height: number;
 };
 
@@ -39,7 +38,13 @@ export class Printer extends BoxShape {
 		size: PrinterSize,
 		maxFigureHeight: number = 15
 	) {
-		super(position, new Orientation(), size.width, size.height, size.length);
+		super(
+			position,
+			new Orientation(),
+			size.radius * 2,
+			size.height,
+			size.radius * 2
+		);
 		this.maxFigureHeight = maxFigureHeight;
 		this.mesh = generatePrinterMesh(size, maxFigureHeight);
 		const headWorldPosition = new Vector3();
@@ -171,11 +176,11 @@ function generatePrinterMesh(size: PrinterSize, maxFigureHeight: number) {
 	const platformHeight = 0.5;
 	const poleWidth = 0.4;
 	const poleHeight = size.height + maxFigureHeight + 3;
-	const ringWidth = size.width / 20;
+	const ringWidth = size.radius / 10;
 	//create body
 	let geometry: BufferGeometry = new CylinderGeometry(
-		size.width / 2,
-		size.width / 2,
+		size.radius,
+		size.radius,
 		size.height - platformHeight,
 		radialSegments
 	);
@@ -188,8 +193,8 @@ function generatePrinterMesh(size: PrinterSize, maxFigureHeight: number) {
 
 	// create platform
 	geometry = new CylinderGeometry(
-		size.width / 2 + 0.05,
-		size.width / 2 + 0.05,
+		size.radius + 0.05,
+		size.radius + 0.05,
 		platformHeight - ringWidth,
 		radialSegments
 	);
@@ -200,7 +205,7 @@ function generatePrinterMesh(size: PrinterSize, maxFigureHeight: number) {
 
 	// create ring
 	geometry = new TorusGeometry(
-		size.width / 2 - ringWidth + 0.05,
+		size.radius - ringWidth + 0.05,
 		ringWidth,
 		3,
 		radialSegments
@@ -219,15 +224,15 @@ function generatePrinterMesh(size: PrinterSize, maxFigureHeight: number) {
 	poleMesh.name = poleName;
 	poleMesh.add(new AxesHelper(2));
 	poleMesh.position.set(
-		size.width / 2 + poleWidth / 2,
+		size.radius + poleWidth / 2,
 		poleHeight / 2 - size.height / 2,
 		0
 	);
 
 	// create head
-	const headWidth = size.width * 0.7;
+	const headWidth = size.radius * 2 * 0.7;
 	const headHeight = 0.7;
-	const headLen = size.width * 0.9;
+	const headLen = size.radius * 2 * 0.9;
 	const headColor = 0x4b7ece;
 
 	const head = new Group();
@@ -251,7 +256,7 @@ function generatePrinterMesh(size: PrinterSize, maxFigureHeight: number) {
 
 	_mesh = new Mesh(geometry, material);
 	_mesh.rotateY(-Math.PI / 2);
-	_mesh.translateZ(headLen / 2 + (size.width / 2 - headLen / 2));
+	_mesh.translateZ(headLen / 2 + (size.radius - headLen / 2));
 	head.add(_mesh);
 
 	poleMesh.add(head);

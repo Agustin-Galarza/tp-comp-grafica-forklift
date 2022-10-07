@@ -2,9 +2,9 @@ import * as THREE from 'three';
 import {
 	BufferGeometry,
 	CylinderGeometry,
-	DoubleSide,
 	Material,
 	Mesh,
+	BackSide,
 } from 'three';
 import { Room } from './collisionManager';
 
@@ -46,6 +46,7 @@ function generateHangarMesh(size: HangarSize): Mesh {
 	let floorMesh = new Mesh(geo, mat);
 
 	floorMesh.rotateX(-Math.PI / 2);
+	// floorMesh.rotateZ(-Math.PI / 2);
 
 	floorMesh.add(new THREE.AxesHelper(5));
 
@@ -69,7 +70,7 @@ function generateHangarMesh(size: HangarSize): Mesh {
 	mat = new THREE.MeshStandardMaterial({
 		color: 0xc1dbe5,
 	});
-	mat.side = DoubleSide;
+	mat.side = BackSide;
 	let roofMesh = new Mesh(geo, mat);
 
 	floorMesh.add(roofMesh);

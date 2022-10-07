@@ -1,4 +1,4 @@
-import { getSceneBuilder, ShelveConstants } from './scene';
+import { getSceneBuilder, SceneProperties } from './scene';
 import * as THREE from 'three';
 import { getUpdater, registerEvent } from './updater';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
@@ -45,7 +45,6 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.localClippingEnabled = true;
 document.body.appendChild(renderer.domElement);
-
 let orbitControls = new OrbitControls(camera, renderer.domElement);
 orbitControls.screenSpacePanning = true;
 
@@ -107,13 +106,12 @@ function setUpKeyControls() {
 			orbitControls.enabled = true;
 			const target = new Vector3();
 			printer.mesh.getWorldPosition(target);
-			orbitControls.target.set(target.x, target.y, target.z);
+			orbitControls.target.set(target.x, target.y + printer.height, target.z);
 		}),
 		'3': controllerOf(() => {
 			sceneBuilder.setShevlesCamera();
 			orbitControls.enabled = true;
-			const target = new Vector3();
-			shelves.mesh.getWorldPosition(target);
+			const target = shelves.getWorldPosition();
 			orbitControls.target.set(target.x, target.y, target.z);
 		}),
 		'4': controllerOf(() => {
@@ -199,8 +197,8 @@ function setUpGUI() {
 	printerFolder.add(
 		guiController.printer,
 		'figureHeight',
-		0,
-		ShelveConstants.shelves.sectionSize.height,
+		0.5,
+		SceneProperties.shelves.sectionSize.height,
 		0.5
 	);
 

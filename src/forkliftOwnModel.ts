@@ -1,7 +1,7 @@
 import { ForkliftSize, LiftSize } from './forklift';
 import * as THREE from 'three';
 
-//@ts-ignore
+// @ts-ignore
 export function getOwnModel(forkliftSize: ForkliftSize, liftSize: LiftSize) {
 	const l = forkliftSize.length / 2,
 		w = forkliftSize.width / 2,
@@ -61,10 +61,6 @@ export function getOwnModel(forkliftSize: ForkliftSize, liftSize: LiftSize) {
 	}
 	const geometry = new THREE.BufferGeometry();
 	geometry.setAttribute('position', new THREE.BufferAttribute(bodyVerteces, 3));
-	// geometry.setAttribute(
-	// 	'normal',
-	// 	new THREE.BufferAttribute(new Float32Array(normals), 3)
-	// );
 	const material = new THREE.MeshStandardMaterial({ color: 0xead312 });
 
 	const mesh = new THREE.Mesh(geometry, material);

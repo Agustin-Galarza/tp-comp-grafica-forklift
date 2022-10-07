@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {
+	AxesHelper,
 	Mesh,
 	MeshBasicMaterial,
 	PointLight,
@@ -36,7 +37,7 @@ export const CONSTANTS = {
 		size: { width: 500, length: 500, height: 50 } as HangarSize,
 	},
 	printer: {
-		size: { width: 6, length: 6, height: 6 } as PrinterSize,
+		size: { radius: 4, height: 7 } as PrinterSize,
 		position: new Vector2(30, 0),
 	},
 	shelves: {
@@ -68,6 +69,7 @@ function getSceneBuilder(mainCamera: THREE.PerspectiveCamera) {
 				CONSTANTS.hangar.size.length / 4
 			)
 		);
+		scene.add(new AxesHelper(10));
 		addRoomLight(
 			scene,
 			new Vector3(
@@ -76,6 +78,7 @@ function getSceneBuilder(mainCamera: THREE.PerspectiveCamera) {
 				-CONSTANTS.hangar.size.length / 4
 			)
 		);
+
 		// create hangar
 		hangar = createHangar(CONSTANTS.hangar.size);
 		scene.add(hangar.mesh);
@@ -179,6 +182,7 @@ function getSceneBuilder(mainCamera: THREE.PerspectiveCamera) {
 		mainCamera.position.y = CONSTANTS.camera.distance;
 		const target = new Vector3();
 		printer.mesh.getWorldPosition(target);
+		target.y += printer.height;
 		mainCamera.lookAt(target);
 	}
 
@@ -188,9 +192,7 @@ function getSceneBuilder(mainCamera: THREE.PerspectiveCamera) {
 		mainCamera.position.x = CONSTANTS.camera.distance;
 		mainCamera.position.z = CONSTANTS.camera.distance;
 		mainCamera.position.y = CONSTANTS.camera.distance;
-		const target = new Vector3();
-		shelves.mesh.getWorldPosition(target);
-		mainCamera.lookAt(target);
+		mainCamera.lookAt(shelves.getWorldPosition());
 	}
 
 	const cameraTypeNames = ['Global', 'ThirdPerson', 'FirstPerson'] as const;
@@ -246,4 +248,4 @@ function addRoomLight(scene: Scene, position: Vector3) {
 	scene.add(roomLigtMesh);
 }
 
-export { getSceneBuilder, CONSTANTS as ShelveConstants };
+export { getSceneBuilder, CONSTANTS as SceneProperties };

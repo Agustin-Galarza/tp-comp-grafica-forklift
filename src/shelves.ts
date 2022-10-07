@@ -167,6 +167,21 @@ export class Shelves extends BoxShape {
 		return true;
 	}
 
+	getWorldPosition(): Vector3 {
+		const target = new Vector3();
+		this.mesh.getWorldPosition(target);
+		target.add(
+			new Vector3(
+				-(this.width / 2) * Math.sin(this.orientation.value) +
+					(this.depth / 2) * Math.cos(this.orientation.value),
+				0,
+				-(this.width / 2) * Math.cos(this.orientation.value) +
+					(this.depth / 2) * Math.sin(this.orientation.value)
+			)
+		);
+		return target;
+	}
+
 	private getPositionToPlace(object: Object3D): number | undefined {
 		let position = undefined;
 		let minDistance: number = Infinity;
@@ -195,7 +210,7 @@ export class Shelves extends BoxShape {
 		return meshCoord.clone().add(this.mesh.position);
 	}
 
-	//@ts-ignore
+	// @ts-ignore
 	private shelfCoordToPosition(shelfCoord: Vector2): number {
 		return shelfCoord.x + shelfCoord.y * this.sections.horizontal;
 	}
