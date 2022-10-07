@@ -1,13 +1,11 @@
 import * as THREE from 'three';
 import {
-	AxesHelper,
 	ColorRepresentation,
 	Curve,
 	Mesh,
 	Object3D,
 	Plane,
 	Vector2,
-	Vector3,
 } from 'three';
 
 export const figureNames = ['A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4'];

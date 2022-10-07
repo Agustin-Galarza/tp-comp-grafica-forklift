@@ -1,6 +1,7 @@
 import { ForkliftSize, LiftSize } from './forklift';
 import * as THREE from 'three';
 
+//@ts-ignore
 export function getOwnModel(forkliftSize: ForkliftSize, liftSize: LiftSize) {
 	const l = forkliftSize.length / 2,
 		w = forkliftSize.width / 2,

@@ -1,5 +1,4 @@
 import {
-	Box3,
 	BoxGeometry,
 	Mesh,
 	MeshPhongMaterial,
@@ -196,6 +195,7 @@ export class Shelves extends BoxShape {
 		return meshCoord.clone().add(this.mesh.position);
 	}
 
+	//@ts-ignore
 	private shelfCoordToPosition(shelfCoord: Vector2): number {
 		return shelfCoord.x + shelfCoord.y * this.sections.horizontal;
 	}

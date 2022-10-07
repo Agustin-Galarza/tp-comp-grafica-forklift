@@ -29,6 +29,7 @@ const poleName = 'pole';
 export class Printer extends BoxShape {
 	readonly mesh: Mesh;
 	private figure: Object3D | undefined = undefined;
+	//@ts-ignore
 	private maxFigureHeight: number;
 	private printing: boolean = false;
 	private headMoving: boolean = false;
@@ -121,7 +122,6 @@ export class Printer extends BoxShape {
 		const prepareFigure: Function = () => {
 			const material = (this.figure! as Mesh).material as Material;
 			material.clippingPlanes = null;
-			const finishPrinting = () => (this.prining = false);
 			this.printing = false;
 		};
 		this.printFigure(height, prepareFigure.bind(this));

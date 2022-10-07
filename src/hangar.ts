@@ -1,12 +1,10 @@
 import * as THREE from 'three';
 import {
-	BackSide,
 	BufferGeometry,
 	CylinderGeometry,
 	DoubleSide,
 	Material,
 	Mesh,
-	Vector2,
 } from 'three';
 import { Room } from './collisionManager';
 

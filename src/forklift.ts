@@ -11,7 +11,6 @@ import { getHangar, Hangar } from './hangar';
 
 import * as THREE from 'three';
 import { AABB, BoxShape, Moving, Orientation } from './collisionManager';
-import { Printer } from './printer';
 import { getOwnModel } from './forkliftOwnModel';
 
 const forkliftShininess = 50;
@@ -54,6 +53,7 @@ export class Forklift extends BoxShape implements Moving {
 	private liftSize: LiftSize;
 	private liftRange: LiftRange;
 	private liftSensitivity;
+	//@ts-ignore
 	private hangar: Hangar;
 	private deltaMovement: number = 0;
 	private figure: Object3D | undefined;
