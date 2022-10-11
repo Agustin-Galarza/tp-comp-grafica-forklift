@@ -26,7 +26,7 @@ export const CONSTANTS = {
 			},
 			liftSensitivity: 0.15,
 			liftSize: { height: 0.3, length: 8 },
-			captureThreshold: 15,
+			captureThreshold: 17,
 		} as ForkliftProperties,
 	},
 	camera: {
