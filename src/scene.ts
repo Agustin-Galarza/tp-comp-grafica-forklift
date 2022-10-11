@@ -136,16 +136,16 @@ function getSceneBuilder(mainCamera: THREE.PerspectiveCamera) {
 		printer.mesh.remove(mainCamera);
 		shelves.mesh.remove(mainCamera);
 		forklift.mesh.add(mainCamera);
-		mainCamera.position.x = 0;
+		mainCamera.position.x = -2;
 		mainCamera.position.y = 0;
-		mainCamera.position.z = CONSTANTS.forklift.properties.size.height;
+		mainCamera.position.z = CONSTANTS.forklift.properties.size.height + 2;
 		const target = new Vector3();
 		forklift.mesh.getWorldPosition(target);
 		mainCamera.lookAt(
 			target.add(
 				new Vector3(
 					10 * Math.cos(forklift.orientation.value),
-					CONSTANTS.forklift.properties.size.height,
+					CONSTANTS.forklift.properties.size.height + 2,
 					-10 * Math.sin(forklift.orientation.value)
 				)
 			)
