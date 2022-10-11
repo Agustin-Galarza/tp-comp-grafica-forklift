@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import {
-	AxesHelper,
 	Mesh,
 	MeshBasicMaterial,
 	PointLight,
@@ -69,7 +68,6 @@ function getSceneBuilder(mainCamera: THREE.PerspectiveCamera) {
 				CONSTANTS.hangar.size.length / 4
 			)
 		);
-		scene.add(new AxesHelper(10));
 		addRoomLight(
 			scene,
 			new Vector3(

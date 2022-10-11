@@ -1,5 +1,4 @@
 import {
-	AxesHelper,
 	BoxGeometry,
 	BufferGeometry,
 	ColorRepresentation,
@@ -222,7 +221,6 @@ function generatePrinterMesh(size: PrinterSize, maxFigureHeight: number) {
 	const poleMesh = new Mesh(geometry, material);
 	bodyMesh.add(poleMesh);
 	poleMesh.name = poleName;
-	poleMesh.add(new AxesHelper(2));
 	poleMesh.position.set(
 		size.radius + poleWidth / 2,
 		poleHeight / 2 - size.height / 2,
@@ -236,7 +234,6 @@ function generatePrinterMesh(size: PrinterSize, maxFigureHeight: number) {
 	const headColor = 0x4b7ece;
 
 	const head = new Group();
-	head.add(new AxesHelper(2));
 
 	material = new MeshPhongMaterial({ color: headColor });
 

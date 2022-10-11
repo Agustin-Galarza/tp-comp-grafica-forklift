@@ -48,8 +48,6 @@ function generateHangarMesh(size: HangarSize): Mesh {
 	floorMesh.rotateX(-Math.PI / 2);
 	// floorMesh.rotateZ(-Math.PI / 2);
 
-	floorMesh.add(new THREE.AxesHelper(5));
-
 	// create roof
 	const roofRadius = size.height * 13;
 	const roofHeight = size.height;
