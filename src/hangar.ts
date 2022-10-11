@@ -5,8 +5,13 @@ import {
 	Material,
 	Mesh,
 	BackSide,
+	Shape,
+	CubicBezierCurve,
+	ShapeBufferGeometry,
+	QuadraticBezierCurve,
 } from 'three';
 import { Room } from './collisionManager';
+import { Vector3, Vector2 } from 'three';
 
 export type HangarSize = {
 	width: number; // x
@@ -49,12 +54,11 @@ function generateHangarMesh(size: HangarSize): Mesh {
 	// floorMesh.rotateZ(-Math.PI / 2);
 
 	// create roof
-	const roofRadius = size.height * 13;
 	const roofHeight = size.height;
+	const roofRadius = size.width ** 2 / (8 * roofHeight) + roofHeight / 2;
 	const l = size.width / 2;
 	const roofHalfAngle = Math.atan(l / (roofRadius - roofHeight));
-	console.log(l / (roofRadius - roofHeight));
-	console.log(roofHalfAngle);
+	// const roofHalfAngle = Math.PI;
 	geo = new CylinderGeometry(
 		roofRadius,
 		roofRadius,
@@ -77,17 +81,30 @@ function generateHangarMesh(size: HangarSize): Mesh {
 	//create walls
 	for (let i = 0; i < 4; i++) {
 		let width,
-			height = size.height + roofHeight;
+			height = size.height;
 		if (i % 2 == 0) {
 			width = size.width;
 		} else {
 			width = size.length;
 		}
-		geo = new THREE.PlaneBufferGeometry(width, height, 100, 100);
 		mat = new THREE.MeshStandardMaterial({
 			color: 0xa2b7db,
 		});
+		geo = new THREE.PlaneBufferGeometry(width, height, 100, 100);
 		let wallMesh = new Mesh(geo, mat);
+		if (i % 2 == 0) {
+			const topWallMesh = new Mesh(
+				createWallTopGeometry(roofHeight, size.width),
+				mat
+			);
+
+			topWallMesh.translateY((i < 2 ? 1 : -1) * roofHeight);
+			if (i >= 2) {
+				topWallMesh.rotateZ(Math.PI);
+			}
+			wallMesh.add(topWallMesh);
+		}
+
 		floorMesh.add(wallMesh);
 		if (i % 2 == 0) {
 			wallMesh.rotateX(((i < 2 ? 1 : -1) * Math.PI) / 2);
@@ -101,6 +118,21 @@ function generateHangarMesh(size: HangarSize): Mesh {
 	}
 
 	return floorMesh;
+}
+
+function createWallTopGeometry(height: number, width: number): BufferGeometry {
+	const w2 = width / 2;
+	const h2 = height / 2;
+
+	const curve = new QuadraticBezierCurve(
+		new Vector2(-w2, -h2),
+		new Vector2(0, h2 * 3.1),
+		new Vector2(w2, -h2)
+	);
+	const shape = new Shape().setFromPoints(curve.getPoints(30));
+	const geometry = new ShapeBufferGeometry(shape);
+
+	return geometry;
 }
 
 export { createHangar, getHangar };

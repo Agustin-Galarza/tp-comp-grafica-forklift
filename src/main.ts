@@ -89,6 +89,9 @@ function setUpKeyControls() {
 	function controllerOf(cb: Function): ControllerDef {
 		return { pressed: false, callback: cb };
 	}
+	const cameraTypes = ['orbital', 'pov'] as const;
+	type CameraTypes = typeof cameraTypes[number];
+	let camType: CameraTypes = 'orbital';
 
 	const controls = {
 		a: controllerOf(forklift.turnLeft.bind(forklift)),
@@ -98,12 +101,14 @@ function setUpKeyControls() {
 		c: controllerOf(sceneBuilder.switchCamera.bind(sceneBuilder)),
 		'1': controllerOf(() => {
 			sceneBuilder.setGlobalCamera();
+			camType = 'orbital';
 			orbitControls.enabled = true;
 			orbitControls.target.set(0, 0, 0);
 		}),
 		'2': controllerOf(() => {
 			sceneBuilder.setPrinterCamera();
 			orbitControls.enabled = true;
+			camType = 'orbital';
 			const target = new Vector3();
 			printer.mesh.getWorldPosition(target);
 			orbitControls.target.set(target.x, target.y + printer.height, target.z);
@@ -111,20 +116,24 @@ function setUpKeyControls() {
 		'3': controllerOf(() => {
 			sceneBuilder.setShevlesCamera();
 			orbitControls.enabled = true;
+			camType = 'orbital';
 			const target = shelves.getWorldPosition();
 			orbitControls.target.set(target.x, target.y, target.z);
 		}),
 		'4': controllerOf(() => {
 			orbitControls.enabled = false;
+			camType = 'pov';
 			sceneBuilder.setFirstPersonCamera();
 		}),
 		'5': controllerOf(() => {
 			orbitControls.enabled = false;
+			camType = 'pov';
 			sceneBuilder.setThirdPersonCamera();
 		}),
 		'6': controllerOf(() => {
 			sceneBuilder.setLateralCamera();
 			orbitControls.enabled = false;
+			camType = 'pov';
 		}),
 		q: controllerOf(forklift.liftUp.bind(forklift)),
 		e: controllerOf(forklift.liftDown.bind(forklift)),
@@ -147,15 +156,20 @@ function setUpKeyControls() {
 			printer.deleteFigure();
 		}),
 		o: controllerOf(() => {
-			camera.zoom += 0.02;
-			camera.updateProjectionMatrix();
-			console.log(camera.zoom);
+			if (camType === 'pov') return;
+			const distToTarget = orbitControls.target.distanceTo(camera.position);
+			if (distToTarget > 4) {
+				camera.translateZ(-0.02 * distToTarget);
+				camera.updateProjectionMatrix();
+			}
 		}),
 		p: controllerOf(() => {
-			camera.zoom -= 0.02;
-			if (camera.zoom <= 0.1) camera.zoom = 0.1;
+			if (camType === 'pov') return;
+
+			const distToTarget = orbitControls.target.distanceTo(camera.position);
+			camera.translateZ(0.02 * distToTarget);
+
 			camera.updateProjectionMatrix();
-			console.log(camera.zoom);
 		}),
 	};
 
