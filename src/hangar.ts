@@ -6,12 +6,10 @@ import {
 	Mesh,
 	BackSide,
 	Shape,
-	CubicBezierCurve,
 	ShapeBufferGeometry,
-	QuadraticBezierCurve,
+	ArcCurve,
 } from 'three';
 import { Room } from './collisionManager';
-import { Vector3, Vector2 } from 'three';
 
 export type HangarSize = {
 	width: number; // x
@@ -54,7 +52,7 @@ function generateHangarMesh(size: HangarSize): Mesh {
 	// floorMesh.rotateZ(-Math.PI / 2);
 
 	// create roof
-	const roofHeight = size.height;
+	const roofHeight = size.height / 2;
 	const roofRadius = size.width ** 2 / (8 * roofHeight) + roofHeight / 2;
 	const l = size.width / 2;
 	const roofHalfAngle = Math.atan(l / (roofRadius - roofHeight));
@@ -94,11 +92,15 @@ function generateHangarMesh(size: HangarSize): Mesh {
 		let wallMesh = new Mesh(geo, mat);
 		if (i % 2 == 0) {
 			const topWallMesh = new Mesh(
-				createWallTopGeometry(roofHeight, size.width),
+				createWallTopGeometry(
+					roofRadius,
+					Math.PI / 2 - roofHalfAngle,
+					Math.PI / 2 + roofHalfAngle
+				),
 				mat
 			);
 
-			topWallMesh.translateY((i < 2 ? 1 : -1) * roofHeight);
+			topWallMesh.translateY(((i < 2 ? 1 : -1) * (roofHeight + height)) / 2);
 			if (i >= 2) {
 				topWallMesh.rotateZ(Math.PI);
 			}
@@ -120,18 +122,15 @@ function generateHangarMesh(size: HangarSize): Mesh {
 	return floorMesh;
 }
 
-function createWallTopGeometry(height: number, width: number): BufferGeometry {
-	const w2 = width / 2;
-	const h2 = height / 2;
-
-	const curve = new QuadraticBezierCurve(
-		new Vector2(-w2, -h2),
-		new Vector2(0, h2 * 3.1),
-		new Vector2(w2, -h2)
-	);
+function createWallTopGeometry(
+	radius: number,
+	startAngle: number,
+	endAngle: number
+): BufferGeometry {
+	const curve = new ArcCurve(-radius, 0, radius, startAngle, endAngle, false);
 	const shape = new Shape().setFromPoints(curve.getPoints(30));
 	const geometry = new ShapeBufferGeometry(shape);
-
+	geometry.center();
 	return geometry;
 }
 
