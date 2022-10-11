@@ -128,7 +128,10 @@ export class Printer extends BoxShape {
 			material.clippingPlanes = null;
 			this.printing = false;
 		};
-		this.printFigure(height + 3, prepareFigure.bind(this));
+		this.printFigure(
+			Math.min(height + 3, this.maxFigureHeight),
+			prepareFigure.bind(this)
+		);
 	}
 	giveFigure(getter: (fig: Object3D) => boolean): void {
 		if (!this.canPickFigure()) return undefined;
