@@ -46,7 +46,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.localClippingEnabled = true;
 document.body.appendChild(renderer.domElement);
 let orbitControls = new OrbitControls(camera, renderer.domElement);
-orbitControls.screenSpacePanning = true;
+orbitControls.enablePan = false;
 
 const sceneBuilder = getSceneBuilder(camera);
 
