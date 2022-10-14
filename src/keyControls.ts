@@ -2,9 +2,41 @@ const parallelKeys: string[] = [];
 
 export type ParallelKey = typeof parallelKeys[number];
 
+const keys = [
+	'a',
+	'd',
+	'w',
+	's',
+	'c',
+	'1',
+	'2',
+	'3',
+	'4',
+	'5',
+	'6',
+	'q',
+	'e',
+	'u',
+	'g',
+	'Backspace',
+	'o',
+	'p',
+	't',
+] as const;
+
+export type Key = typeof keys[number];
+
 type Controller = {
 	[key in ParallelKey]: { pressed: boolean; callback: Function };
 };
+
+type KeyPressed = {
+	[key in Key]: boolean;
+};
+
+// @ts-ignore
+const isKeyPressed: KeyPressed = {};
+keys.forEach(k => (isKeyPressed[k] = false));
 
 const controller: Controller = {};
 
@@ -17,18 +49,18 @@ function removeParallelKeyControl(keyName: string): void {
 	delete controller[keyName];
 }
 
-function isEventKey(str: string): str is ParallelKey {
-	return str in controller;
+function isEventKey(str: string): str is Key {
+	return keys.includes(str as Key);
 }
 
 document.addEventListener('keydown', function (event) {
 	if (isEventKey(event.key)) {
-		controller[event.key].pressed = true;
+		isKeyPressed[event.key] = true;
 	}
 });
 document.addEventListener('keyup', function (event) {
 	if (isEventKey(event.key)) {
-		controller[event.key].pressed = false;
+		isKeyPressed[event.key] = false;
 	}
 });
 
@@ -45,3 +77,4 @@ const keyController = {
 };
 
 export default keyController;
+export { isKeyPressed };

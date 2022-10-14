@@ -9,7 +9,7 @@ export default class CollisionManager<T extends BoxShape & Moving> {
 		this.bodies = obstacles;
 		this.room = room;
 	}
-	update() {
+	update(dt: number) {
 		this.resolveRoomCollision();
 
 		for (let body of this.bodies) {
@@ -42,30 +42,33 @@ export default class CollisionManager<T extends BoxShape & Moving> {
 					? objectAABB.yMax - bodyAABB.yMin
 					: bodyAABB.yMax - objectAABB.yMin;
 			// correct position by the minimun overlap
+			let dx = 0,
+				dy = 0;
 			if (colX <= colY) {
-				this.object.position.x -= Math.sign(colVec.x) * colX;
+				dx = -Math.sign(colVec.x) * colX;
 			} else {
-				this.object.position.y -= Math.sign(colVec.y) * colY;
+				dy = -Math.sign(colVec.y) * colY;
 			}
+			this.object.updatePosition(dx, dy);
 		}
 	}
 	private resolveRoomCollision() {
 		const objectAABB = this.object.getAABB();
 		const roomAABB = this.room.getAABB();
+		let dx = 0,
+			dy = 0;
 		if (roomAABB.xMax < objectAABB.xMax) {
-			this.object.position.x =
-				roomAABB.xMax - (objectAABB.xMax - this.object.position.x);
+			dx = roomAABB.xMax - objectAABB.xMax;
 		} else if (roomAABB.xMin > objectAABB.xMin) {
-			this.object.position.x =
-				roomAABB.xMin - (objectAABB.xMin - this.object.position.x);
+			dx = roomAABB.xMin - objectAABB.xMin;
 		}
 		if (roomAABB.yMax < objectAABB.yMax) {
-			this.object.position.y =
-				roomAABB.yMax - (objectAABB.yMax - this.object.position.y);
+			dy = roomAABB.yMax - objectAABB.yMax;
 		} else if (roomAABB.yMin > objectAABB.yMin) {
-			this.object.position.y =
-				roomAABB.yMin - (objectAABB.yMin - this.object.position.y);
+			dy = roomAABB.yMin - objectAABB.yMin;
 		}
+
+		this.object.updatePosition(dx, dy);
 	}
 }
 
@@ -98,31 +101,24 @@ export type AABB = {
 	yMin: number;
 };
 
-export class BoxShape {
+export abstract class BoxShape {
 	readonly width: number;
 	readonly height: number;
 	readonly depth: number;
 	readonly orientation: Orientation;
-	private _position: Vector2;
 	constructor(
-		position: Vector2,
 		orientation: Orientation,
 		width: number,
 		height: number,
 		depth: number
 	) {
-		this._position = position;
 		this.orientation = orientation;
 		this.width = width;
 		this.height = height;
 		this.depth = depth;
 	}
-	get position() {
-		return this._position;
-	}
-	protected set position(newPos: Vector2) {
-		this._position = newPos;
-	}
+	abstract get position();
+	protected abstract set position(newPos: Vector2);
 	asArray(): number[] {
 		return [this.width, this.height, this.depth];
 	}
@@ -161,12 +157,12 @@ export class BoxShape {
 }
 
 export interface Moving {
-	updatePosition(): Vector2;
+	updatePosition(x: number, y: number): void;
 }
 
 export abstract class Room extends BoxShape {
 	constructor(width: number, depth: number, height: number) {
-		super(new Vector2(), new Orientation(), width, height, depth);
+		super(new Orientation(), width, height, depth);
 	}
 	getAABB(): AABB {
 		return {

@@ -1,12 +1,13 @@
 import { getSceneBuilder, SceneProperties } from './scene';
 import * as THREE from 'three';
-import { getUpdater, registerEvent } from './updater';
+import updater from './updater';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import keyController from './keyControlls';
+import keyController from './keyControls';
 import CollisionManager from './collisionManager';
 import { GUI } from 'dat.gui';
 import { FigureName } from './figures';
 import { ColorRepresentation, Vector3 } from 'three';
+import { PrintFigureData } from './printer';
 
 type ControllerDef = {
 	pressed: boolean;
@@ -27,6 +28,14 @@ const guiController = {
 		figureColor: '#a970ff' as ColorRepresentation,
 	},
 };
+export function getPrintFigureData(): PrintFigureData {
+	return {
+		type: guiController.printer.figure,
+		height: guiController.printer.figureHeight,
+		extrusionAngle: guiController.printer.torsionAngle,
+		color: guiController.printer.figureColor,
+	};
+}
 let usedFigureNames: FigureName[] = guiController.printer.revolutionFigureNames;
 
 window.addEventListener('resize', () => {
@@ -59,12 +68,12 @@ const collisionManager = new CollisionManager(
 	shelves
 );
 
-const updater = getUpdater();
-registerEvent(() => {
-	collisionManager.update();
-	forklift.updatePosition();
-	forklift.reset();
+updater.registerEvent(data => {
+	collisionManager.update(data.dt);
 });
+updater.registerEntity(forklift);
+updater.registerEntity(printer);
+updater.registerEntity(shelves);
 
 setUpGUI();
 
@@ -73,17 +82,21 @@ sceneBuilder.setGlobalCamera();
 
 setUpKeyControls();
 
-function animate() {
+let prevTime = 0;
+
+function animate(time: DOMHighResTimeStamp) {
+	const dt = time - prevTime;
+	prevTime = time;
 	requestAnimationFrame(animate);
 
 	keyController.resolveKeys();
 
-	updater.updateAll();
+	updater.updateAll(dt);
 
 	renderer.render(scene, camera);
 }
 
-animate();
+animate(prevTime);
 
 function setUpKeyControls() {
 	function controllerOf(cb: Function): ControllerDef {
@@ -94,10 +107,6 @@ function setUpKeyControls() {
 	let camType: CameraTypes = 'orbital';
 
 	const controls = {
-		a: controllerOf(forklift.turnLeft.bind(forklift)),
-		d: controllerOf(forklift.turnRight.bind(forklift)),
-		w: controllerOf(forklift.accelerate.bind(forklift)),
-		s: controllerOf(forklift.decelerate.bind(forklift)),
 		c: controllerOf(sceneBuilder.switchCamera.bind(sceneBuilder)),
 		'1': controllerOf(() => {
 			sceneBuilder.setGlobalCamera();
@@ -134,26 +143,6 @@ function setUpKeyControls() {
 			sceneBuilder.setLateralCamera();
 			orbitControls.enabled = false;
 			camType = 'pov';
-		}),
-		q: controllerOf(forklift.liftUp.bind(forklift)),
-		e: controllerOf(forklift.liftDown.bind(forklift)),
-		u: controllerOf(() => {
-			printer.generateFigure(
-				guiController.printer.figure,
-				guiController.printer.figureHeight,
-				guiController.printer.torsionAngle,
-				{
-					color: guiController.printer.figureColor,
-				}
-			);
-		}),
-		g: controllerOf(() => {
-			forklift.giveFigure(shelves.addObject.bind(shelves));
-			printer.giveFigure(forklift.takeFigure.bind(forklift));
-		}),
-		Backspace: controllerOf(() => {
-			forklift.deleteFigure();
-			printer.deleteFigure();
 		}),
 		o: controllerOf(() => {
 			if (camType === 'pov') return;

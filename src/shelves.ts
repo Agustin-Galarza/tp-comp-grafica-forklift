@@ -1,5 +1,6 @@
 import {
 	BoxGeometry,
+	Event,
 	Mesh,
 	MeshPhongMaterial,
 	Object3D,
@@ -7,6 +8,9 @@ import {
 	Vector3,
 } from 'three';
 import { BoxShape, Orientation } from './collisionManager';
+import { FigureHolder, canTakeFigure } from './figures';
+import { isKeyPressed, Key } from './keyControls';
+import { UpdateData } from './updater';
 
 export type Size3 = {
 	width: number;
@@ -38,7 +42,7 @@ export function createShelves(
 	});
 }
 
-export class Shelves extends BoxShape {
+export class Shelves extends BoxShape implements FigureHolder {
 	private sections: {
 		horizontal: number;
 		vertical: number;
@@ -48,7 +52,7 @@ export class Shelves extends BoxShape {
 	private plankHeight = 0.7;
 	private poleSize = 1;
 	private plankOverhang = 1;
-	private objects: Object3D[];
+	private objects: (Object3D | undefined)[];
 	private captureThreshold;
 	private baseHeight;
 	constructor(
@@ -71,7 +75,7 @@ export class Shelves extends BoxShape {
 			baseHeight + vSections * sectionSize.height + (vSections + 1) * 0.7;
 		const width = hSections * sectionSize.width;
 		const depth = sectionSize.depth;
-		super(position, orientation, width, height, depth);
+		super(orientation, width, height, depth);
 		this.sections = {
 			size: sectionSize,
 			horizontal: hSections,
@@ -79,8 +83,22 @@ export class Shelves extends BoxShape {
 		};
 		this.baseHeight = baseHeight;
 		this.mesh = this.generateMesh();
+		this.position = position;
 		this.objects = new Array(this.sections.horizontal * this.sections.vertical);
 		this.captureThreshold = captureThreshold;
+	}
+
+	get position(): Vector2 {
+		const aux = this.positionToCornerPosition(new Vector2());
+		return new Vector2(
+			this.mesh.position.x - aux.x,
+			this.mesh.position.y - aux.y
+		);
+	}
+	protected set position(newPos: Vector2) {
+		const meshPos = this.positionToCornerPosition(newPos);
+		this.mesh.position.setX(meshPos.x);
+		this.mesh.position.setY(meshPos.y);
 	}
 
 	private generateMesh(): Mesh {
@@ -140,25 +158,61 @@ export class Shelves extends BoxShape {
 
 		// base!.rotateY(-Math.PI / 2);
 
-		const cornerRelativePosition = new Vector2(
-			(this.depth / 2) * Math.cos(this.orientation.value) +
-				(this.width / 2) * Math.sin(this.orientation.value),
-			(this.depth / 2) * Math.sin(this.orientation.value) +
-				(this.width / 2) * -Math.cos(this.orientation.value)
-		);
-		const cornerPosition = this.position.clone().add(cornerRelativePosition);
+		const cornerRelativePosition = this.positionToCornerPosition(new Vector2());
 
-		base!.position.set(cornerPosition.x, cornerPosition.y, poleHeight / 2);
+		base!.position.set(
+			cornerRelativePosition.x,
+			cornerRelativePosition.y,
+			poleHeight / 2
+		);
 		base!.rotateZ(this.orientation.value + Math.PI / 2);
 		return base!;
 	}
 
-	addObject(object: Object3D): boolean {
+	positionToCornerPosition(pos: Vector2) {
+		return new Vector2(
+			(this.depth / 2) * Math.cos(this.orientation.value) +
+				(this.width / 2) * Math.sin(this.orientation.value),
+			(this.depth / 2) * Math.sin(this.orientation.value) +
+				(this.width / 2) * -Math.cos(this.orientation.value)
+		).add(pos);
+	}
+
+	update(updateData: UpdateData) {
+		const actionKey: Key = 't';
+		if (isKeyPressed[actionKey]) {
+			updateData.entities.forEach(entity => {
+				if (entity === this) return;
+				if (canTakeFigure(entity)) {
+					this.giveFigure(entity);
+				}
+			});
+		}
+	}
+
+	giveFigure(holder: FigureHolder): void {
+		for (let i = 0; i < this.objects.length; i++) {
+			if (this.objects[i] === undefined) continue;
+			const newFigPos = this.meshCoordToWorldCoord(
+				this.shelfCoordToMeshCoord(this.positionToShelfCoord(i))
+			);
+			const newFig = this.objects[i]!.clone();
+			newFig.position.set(newFigPos.x, newFigPos.y, newFigPos.z);
+			if (holder.takeFigure(newFig)) {
+				newFig.rotateX(-Math.PI / 2);
+				this.mesh.remove(this.objects[i]!);
+				this.objects[i] = undefined;
+			}
+		}
+	}
+
+	takeFigure(object: Object3D): boolean {
 		const pos = this.getPositionToPlace(object);
 		if (pos == undefined) return false;
 
 		this.objects[pos] = object;
 		this.mesh.add(object);
+		// object.rotateX(Math.PI / 2);
 		const meshCoord = this.shelfCoordToMeshCoord(
 			this.positionToShelfCoord(pos)
 		);

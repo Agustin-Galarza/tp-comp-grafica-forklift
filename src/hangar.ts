@@ -10,6 +10,7 @@ import {
 	ArcCurve,
 } from 'three';
 import { Room } from './collisionManager';
+import { Vector2 } from 'three';
 
 export type HangarSize = {
 	width: number; // x
@@ -25,6 +26,11 @@ export class Hangar extends Room {
 		super(size.width, size.length, size.height);
 		this.mesh = generateHangarMesh(size);
 	}
+	get position(): THREE.Vector2 {
+		return new Vector2();
+	}
+	// @ts-ignore
+	set position(newPos: THREE.Vector2) {}
 }
 
 function createHangar(size: HangarSize) {

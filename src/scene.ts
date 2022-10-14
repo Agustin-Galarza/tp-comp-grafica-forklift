@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {
+	AxesHelper,
 	Mesh,
 	MeshBasicMaterial,
 	PointLight,
@@ -13,19 +14,22 @@ import { createForklift, Forklift, ForkliftProperties } from './forklift';
 import { createHangar, Hangar, HangarSize } from './hangar';
 import { createPrinter, Printer, PrinterSize } from './printer';
 import { createShelves, Shelves, Size3 } from './shelves';
+import { generateSpotlight } from './spotlight';
 
 export const CONSTANTS = {
 	forklift: {
 		properties: {
-			turnSensitivity: 0.04,
-			speed: 0.5,
+			turnSensitivity: 0.004,
+			speed: 0.04,
 			size: {
 				length: 15,
 				width: 7,
 				height: 4,
 			},
-			liftSensitivity: 0.15,
-			liftSize: { height: 0.3, length: 8 },
+			lift: {
+				sensitivity: 0.015,
+				size: { height: 0.3, length: 8 },
+			},
 			captureThreshold: 17,
 		} as ForkliftProperties,
 	},
@@ -33,7 +37,7 @@ export const CONSTANTS = {
 		distance: 40,
 	},
 	hangar: {
-		size: { width: 500, length: 500, height: 50 } as HangarSize,
+		size: { width: 300, length: 300, height: 60 } as HangarSize,
 	},
 	printer: {
 		size: { radius: 4, height: 7 } as PrinterSize,
@@ -59,23 +63,8 @@ function getSceneBuilder(mainCamera: THREE.PerspectiveCamera) {
 	function initialize() {
 		scene = new THREE.Scene();
 
-		scene.add(new THREE.AmbientLight(0x707070));
-		addRoomLight(
-			scene,
-			new Vector3(
-				0,
-				CONSTANTS.hangar.size.height / 2,
-				CONSTANTS.hangar.size.length / 4
-			)
-		);
-		addRoomLight(
-			scene,
-			new Vector3(
-				0,
-				CONSTANTS.hangar.size.height / 2,
-				-CONSTANTS.hangar.size.length / 4
-			)
-		);
+		scene.add(new THREE.AmbientLight(0x707070, 0.5));
+		addLights(scene);
 
 		// create hangar
 		hangar = createHangar(CONSTANTS.hangar.size);
@@ -105,6 +94,11 @@ function getSceneBuilder(mainCamera: THREE.PerspectiveCamera) {
 		);
 		hangar.mesh.add(shelves.mesh);
 
+		// scene.add(new AxesHelper(5));
+		forklift.mesh.add(new AxesHelper(5));
+		hangar.mesh.add(new AxesHelper(5));
+		printer.mesh.add(new AxesHelper(5));
+		shelves.mesh.add(new AxesHelper(5));
 		return {
 			scene,
 			forklift,
@@ -234,16 +228,29 @@ function getSceneBuilder(mainCamera: THREE.PerspectiveCamera) {
 	};
 }
 
+function addLights(scene: Scene) {
+	const height = CONSTANTS.hangar.size.height * 1.2;
+	const maxLen = CONSTANTS.hangar.size.length / 2;
+	const maxWidth = CONSTANTS.hangar.size.width / 2;
+	// add central lights
+	const pos = new Vector3();
+	pos.setY(height);
+	const zValues = [maxLen / 2, 0, -maxLen / 2];
+	for (const zVal of zValues) {
+		pos.setZ(zVal);
+		pos.setX(0);
+		addRoomLight(scene, pos);
+		pos.setX(-maxWidth / 2);
+		addRoomLight(scene, pos);
+		pos.setX(maxWidth / 2);
+		addRoomLight(scene, pos);
+	}
+}
+
 function addRoomLight(scene: Scene, position: Vector3) {
-	const roomLigt = new PointLight(0xffffff, 0.3, 0, 2);
-	const roomLigtMesh = new Mesh(
-		new SphereGeometry(1),
-		new MeshBasicMaterial({ color: 0xffffff })
-	);
-	roomLigt.position.set(...position.toArray());
-	roomLigtMesh.position.set(...position.toArray());
-	scene.add(roomLigt);
-	scene.add(roomLigtMesh);
+	const sl = generateSpotlight(position);
+	scene.add(sl.light);
+	scene.add(sl.mesh);
 }
 
 export { getSceneBuilder, CONSTANTS as SceneProperties };

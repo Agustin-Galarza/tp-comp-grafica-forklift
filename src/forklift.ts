@@ -12,6 +12,9 @@ import { getHangar, Hangar } from './hangar';
 import * as THREE from 'three';
 import { AABB, BoxShape, Moving, Orientation } from './collisionManager';
 import { getOwnModel } from './forkliftOwnModel';
+import { EventType, UpdateData } from './updater';
+import { isKeyPressed, Key } from './keyControls';
+import { FigureHolder, canTakeFigure, canGiveFigure } from './figures';
 
 const forkliftShininess = 50;
 type LiftRange = {
@@ -30,12 +33,17 @@ export type ForkliftSize = {
 	height: number;
 };
 
+export type LiftData = {
+	size: LiftSize;
+	sensitivity: number;
+	range?: LiftRange;
+};
+
 export type ForkliftProperties = {
 	turnSensitivity: number;
 	speed: number;
-	liftSensitivity: number;
 	size: ForkliftSize;
-	liftSize: LiftSize;
+	lift: LiftData;
 	captureThreshold?: number;
 };
 
@@ -46,7 +54,7 @@ let forklift: ForkliftType | undefined = undefined;
 function getForklift() {
 	return forklift;
 }
-export class Forklift extends BoxShape implements Moving {
+export class Forklift extends BoxShape implements Moving, FigureHolder {
 	private turnSensitivity: number;
 	private speed: number;
 	readonly mesh: Mesh;
@@ -58,74 +66,84 @@ export class Forklift extends BoxShape implements Moving {
 	private deltaMovement: number = 0;
 	private figure: Object3D | undefined;
 	private captureThreshold;
+	private dx: number = 0;
+	private dy: number = 0;
 	constructor({
 		turnSensitivity,
 		speed,
-		liftSensitivity,
 		size,
-		liftSize,
+		lift,
 		captureThreshold = 15,
 	}: ForkliftProperties) {
 		super(
-			new Vector2(),
 			new Orientation(),
 			size.width,
 			size.height,
-			size.length + liftSize.length
+			size.length + lift.size.length
 		);
-		this.liftSize = liftSize;
-		this.liftRange = {
+		this.liftSize = lift.size;
+		lift.range = lift.range ?? {
 			top: (this.height * 7) / 2,
 			bottom: -this.height / 2 + this.liftSize.height / 2,
 		};
+		this.liftRange = lift.range!;
 		this.speed = speed;
 		this.hangar = getHangar()!;
-		this.mesh = generateForkliftMesh(size, liftSize, this.liftRange);
+		this.mesh = generateForkliftMesh(size, lift);
 		this.turnSensitivity = turnSensitivity;
-		this.liftSensitivity = liftSensitivity;
+		this.liftSensitivity = lift.sensitivity;
 		this.figure = undefined;
 		this.captureThreshold = captureThreshold;
 	}
-	getPosition() {
-		return this.position;
+	updatePosition(dx: number, dy: number): void {
+		this.dx += dx;
+		this.dy += dy;
 	}
-	accelerate() {
-		this.deltaMovement += this.speed;
+
+	override get position(): Vector2 {
+		return new Vector2(this.mesh.position.x, this.mesh.position.y);
+	}
+	protected override set position(newPos: Vector2) {
+		this.mesh.position.setX(newPos.x);
+		this.mesh.position.setY(newPos.y);
+	}
+
+	accelerate({ dt }: UpdateData) {
+		this.mesh.translateX(this.speed * dt);
 		this.animateWheels();
 	}
-	decelerate() {
-		this.deltaMovement -= this.speed;
+	decelerate({ dt }: UpdateData) {
+		this.mesh.translateX(-this.speed * dt);
 		this.animateWheels(true);
 	}
-	reset() {
-		this.deltaMovement = 0;
+	turnLeft({ dt }: UpdateData) {
+		this.orientation.rotate(this.turnSensitivity * dt);
+		this.mesh.rotateZ(this.turnSensitivity * dt);
 	}
-	turnLeft() {
-		this.orientation.rotate(this.turnSensitivity);
+	turnRight({ dt }: UpdateData) {
+		this.orientation.rotate(-this.turnSensitivity * dt);
+		this.mesh.rotateZ(-this.turnSensitivity * dt);
 	}
-	turnRight() {
-		this.orientation.rotate(-this.turnSensitivity);
-	}
-	liftUp() {
+	liftUp({ dt }: UpdateData) {
 		const lift = this.getLift()!;
 		if (lift.position.z >= this.liftRange.top) return;
-		lift.translateZ(this.liftSensitivity);
+		lift.translateZ(this.liftSensitivity * dt);
 	}
-	liftDown() {
+	liftDown({ dt }: UpdateData) {
 		const lift = this.getLift()!;
 		if (lift.position.z <= this.liftRange.bottom) return;
-		lift.translateZ(-this.liftSensitivity);
+		lift.translateZ(-this.liftSensitivity * dt);
 	}
 	getAABB(): AABB {
+		const liftLen = this.liftSize.length / 2;
+		const halfDepth = this.depth / 2;
 		const y_vals = [
-			(this.depth / 2.4 + this.liftSize.length) *
-				Math.sin(this.orientation.value),
-			(this.depth / 2.4) * Math.sin(this.orientation.value + Math.PI),
+			(halfDepth + liftLen) * Math.sin(this.orientation.value),
+			(halfDepth - liftLen) * Math.sin(this.orientation.value + Math.PI),
 		];
 		const x_vals = [
-			(this.depth / 2.4 + this.liftSize.length) *
-				Math.cos(this.orientation.value),
-			(this.depth / 2.4) * Math.cos(this.orientation.value + Math.PI),
+			(halfDepth + liftLen) * Math.cos(this.orientation.value),
+			(halfDepth - liftLen) * Math.cos(this.orientation.value + Math.PI),
 		];
 		return {
 			xMax: this.position.x + Math.max(...x_vals),
@@ -134,21 +152,45 @@ export class Forklift extends BoxShape implements Moving {
 			yMin: this.position.y + Math.min(...y_vals),
 		};
 	}
-	updatePosition() {
-		this.position = new Vector2(this.deltaMovement)
-			.rotateAround(new Vector2(), this.orientation.value)
-			.add(this.position);
 
-		this.updateMeshPosition();
-		return this.position;
+	private onPressedKeys: {
+		[key in Key]?: EventType;
+	} = {
+		w: this.accelerate.bind(this),
+		s: this.decelerate.bind(this),
+		d: this.turnRight.bind(this),
+		a: this.turnLeft.bind(this),
+		q: this.liftUp.bind(this),
+		e: this.liftDown.bind(this),
+		g: this.handleFigure.bind(this),
+		Backspace: this.deleteFigure.bind(this),
+	};
+
+	update(updateData: UpdateData) {
+		this.mesh.position.x += this.dx;
+		this.dx = 0;
+		this.mesh.position.y += this.dy;
+		this.dy = 0;
+		Object.entries(this.onPressedKeys).forEach(entry => {
+			const key = entry[0] as Key;
+			const action = entry[1];
+			if (isKeyPressed[key]) {
+				action(updateData);
+			}
+		});
 	}
-	private updateMeshPosition() {
-		this.mesh.position.x = this.position.x;
-		this.mesh.position.y = this.position.y;
-		this.mesh.rotation.z = this.orientation.value;
+	private handleFigure(updateData: UpdateData) {
+		updateData.entities.forEach(entity => {
+			if (entity === this) return;
+			if (this.figure !== undefined) {
+				if (canTakeFigure(entity)) {
+					this.giveFigure(entity);
+				}
+			}
+		});
 	}
-	private getLift() {
-		return this.mesh.getObjectByName('lift');
+	private getLift(): Mesh {
+		return this.mesh.getObjectByName('lift') as Mesh;
 	}
 	private animateWheels(reverse = false) {
 		for (let i = 0; i < 4; i++) {
@@ -176,6 +218,16 @@ export class Forklift extends BoxShape implements Moving {
 		lift.add(this.figure);
 		return true;
 	}
+	giveFigure(holder: FigureHolder): void {
+		if (!this.figure) return undefined;
+
+		const newFigPos = this.computeFigureGlobalPosition()!;
+		const newFig = this.figure.clone();
+		newFig.position.set(newFigPos.x, newFigPos.y, newFigPos.z);
+		if (holder.takeFigure(newFig)) {
+			this.deleteFigure();
+		}
+	}
 	private worldPositionToHangarPosition(pos: Vector3): Vector3 {
 		return new Vector3(pos.x, -pos.z, pos.y);
 	}
@@ -188,17 +240,7 @@ export class Forklift extends BoxShape implements Moving {
 		this.getLift()!.getWorldPosition(vec);
 		return this.worldPositionToHangarPosition(vec).add(this.figure.position);
 	}
-	giveFigure(getter: (fig: Object3D) => boolean): void {
-		if (!this.figure) return undefined;
 
-		const newFigPos = this.computeFigureGlobalPosition()!;
-		const newFig = this.figure.clone();
-		newFig.position.set(newFigPos.x, newFigPos.y, newFigPos.z);
-		if (getter(newFig)) {
-			this.deleteFigure();
-			return;
-		}
-	}
 	deleteFigure() {
 		if (!this.figure) return;
 		this.getLift()!.remove(this.figure);
@@ -210,11 +252,7 @@ function createForklift(properties: ForkliftProperties) {
 	return new Forklift(properties);
 }
 
-function generateForkliftMesh(
-	forkliftSize: ForkliftSize,
-	liftSize: LiftSize,
-	liftRange: LiftRange
-) {
+function generateForkliftMesh(forkliftSize: ForkliftSize, liftData: LiftData) {
 	//body
 	let geometry: THREE.BufferGeometry = new THREE.BoxGeometry(
 		forkliftSize.width,
@@ -227,15 +265,14 @@ function generateForkliftMesh(
 		color: 0xfdda0d,
 		shininess: forkliftShininess,
 	});
-	// const bodyMesh = new THREE.Mesh(geometry, material);
-	const bodyMesh = getOwnModel(forkliftSize, liftSize);
+	const bodyMesh = getOwnModel(forkliftSize, liftData.size);
 
 	//lift
-	const poleSize = liftSize.length * 0.15;
+	const poleSize = liftData.size.length * 0.15;
 	geometry = new THREE.BoxGeometry(
 		forkliftSize.width,
-		liftSize.height,
-		liftSize.length - poleSize
+		liftData.size.height,
+		liftData.size.length - poleSize
 	);
 	geometry.rotateX(Math.PI / 2);
 	geometry.rotateZ(Math.PI / 2);
@@ -247,11 +284,11 @@ function generateForkliftMesh(
 	liftMesh.name = 'lift';
 	bodyMesh.add(liftMesh);
 	liftMesh.translateX(
-		forkliftSize.length / 2 + liftSize.length / 2 + poleSize / 2
+		forkliftSize.length / 2 + liftData.size.length / 2 + poleSize / 2
 	);
 
 	// / poles
-	const poleHeight = (liftRange.top - liftRange.bottom) * 1.1;
+	const poleHeight = (liftData.range!.top - liftData.range!.bottom) * 1.1;
 	geometry = new BoxGeometry(poleSize, poleHeight, poleSize);
 	material = new MeshPhongMaterial({
 		color: 0x9eb1b8,
@@ -261,14 +298,14 @@ function generateForkliftMesh(
 	poleMesh.rotateX(-Math.PI / 2);
 	bodyMesh.add(poleMesh);
 	poleMesh.translateX(forkliftSize.length / 2 + poleSize / 2);
-	poleMesh.translateY(-poleHeight / 2 - liftRange.bottom * 1.2);
+	poleMesh.translateY(-poleHeight / 2 - liftData.range!.bottom * 1.2);
 	poleMesh.translateZ((-forkliftSize.width / 2) * 0.6);
 
 	poleMesh = new Mesh(geometry, material);
 	poleMesh.rotateX(-Math.PI / 2);
 	bodyMesh.add(poleMesh);
 	poleMesh.translateX(forkliftSize.length / 2 + poleSize / 2);
-	poleMesh.translateY(-poleHeight / 2 - liftRange.bottom * 1.2);
+	poleMesh.translateY(-poleHeight / 2 - liftData.range!.bottom * 1.2);
 	poleMesh.translateZ((forkliftSize.width / 2) * 0.6);
 
 	geometry = new BoxGeometry(

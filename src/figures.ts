@@ -7,9 +7,20 @@ import {
 	Plane,
 	Vector2,
 } from 'three';
-
+export interface FigureHolder {
+	takeFigure(figure: Object3D): boolean;
+	giveFigure(holder: FigureHolder): void;
+}
 export const figureNames = ['A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4'];
 export type FigureName = typeof figureNames[number];
+
+export function canTakeFigure(obj: Object): obj is FigureHolder {
+	return 'takeFigure' in obj;
+}
+
+export function canGiveFigure(obj: Object): obj is FigureHolder {
+	return 'giveFigure' in obj;
+}
 
 type CurveType = 'bezier' | 'spline';
 

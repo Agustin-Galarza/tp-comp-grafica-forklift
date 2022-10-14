@@ -3,6 +3,7 @@ import {
 	BufferGeometry,
 	ColorRepresentation,
 	CylinderGeometry,
+	Event,
 	Group,
 	Material,
 	Mesh,
@@ -14,7 +15,10 @@ import {
 	Vector3,
 } from 'three';
 import { BoxShape, Orientation } from './collisionManager';
-import { FigureName, getFigure } from './figures';
+import { FigureName, getFigure, FigureHolder, canTakeFigure } from './figures';
+import { isKeyPressed, Key } from './keyControls';
+import { UpdateData, EventType } from './updater';
+import { getPrintFigureData } from './main';
 
 export type PrinterSize = {
 	radius: number;
@@ -24,7 +28,14 @@ export type PrinterSize = {
 const headName = 'head';
 const poleName = 'pole';
 
-export class Printer extends BoxShape {
+export type PrintFigureData = {
+	type: FigureName;
+	height: number;
+	extrusionAngle: number;
+	color?: ColorRepresentation;
+};
+
+export class Printer extends BoxShape implements FigureHolder {
 	readonly mesh: Mesh;
 	private figure: Object3D | undefined = undefined;
 	//@ts-ignore
@@ -37,13 +48,7 @@ export class Printer extends BoxShape {
 		size: PrinterSize,
 		maxFigureHeight: number = 15
 	) {
-		super(
-			position,
-			new Orientation(),
-			size.radius * 2,
-			size.height,
-			size.radius * 2
-		);
+		super(new Orientation(), size.radius * 2, size.height, size.radius * 2);
 		this.maxFigureHeight = maxFigureHeight;
 		this.mesh = generatePrinterMesh(size, maxFigureHeight);
 		const headWorldPosition = new Vector3();
@@ -54,12 +59,14 @@ export class Printer extends BoxShape {
 		);
 		this.moveHeadToBase(() => {});
 	}
-	generateFigure(
-		type: FigureName,
-		height: number,
-		extrusionAngle: number = 0,
-		{ color }: { color?: ColorRepresentation } = {}
-	) {
+	get position(): Vector2 {
+		return new Vector2(this.mesh.position.x, this.mesh.position.y);
+	}
+	set position(newPos: Vector2) {
+		this.mesh.position.setX(newPos.x);
+		this.mesh.position.setY(newPos.y);
+	}
+	generateFigure({ type, height, extrusionAngle, color }: PrintFigureData) {
 		if (this.figure || this.headMoving) return;
 
 		this.mesh.geometry.computeBoundingBox();
@@ -100,6 +107,32 @@ export class Printer extends BoxShape {
 			this.moveHead(distance - stepDistance, steps - 1, andThen);
 		}, 0.1);
 	}
+	private onPressedKeys: {
+		[key in Key]?: EventType;
+	} = {
+		u: updateData => this.generateFigure(getPrintFigureData()),
+		g: this.handleFigure.bind(this),
+		Backspace: this.deleteFigure.bind(this),
+	};
+	handleFigure(updateData: UpdateData) {
+		updateData.entities.forEach(entity => {
+			if (entity === this) return;
+			if (this.figure !== undefined) {
+				if (canTakeFigure(entity)) {
+					this.giveFigure(entity);
+				}
+			}
+		});
+	}
+	update(updateData: UpdateData) {
+		Object.entries(this.onPressedKeys).forEach(entry => {
+			const key = entry[0] as Key;
+			const action = entry[1];
+			if (isKeyPressed[key]) {
+				action(updateData);
+			}
+		});
+	}
 	moveHeadToBase(andThen: Function) {
 		const pole: Object3D = this.mesh.getObjectByName(poleName)!;
 		const head: Object3D = this.mesh.getObjectByName(headName)!;
@@ -133,13 +166,16 @@ export class Printer extends BoxShape {
 			prepareFigure.bind(this)
 		);
 	}
-	giveFigure(getter: (fig: Object3D) => boolean): void {
+	takeFigure(figure: Object3D<Event>): boolean {
+		return false;
+	}
+	giveFigure(holder: FigureHolder): void {
 		if (!this.canPickFigure()) return undefined;
 
 		const newFigPos = this.computeFigureGlobalPosition()!;
 		const newFig = this.figure!.clone();
 		newFig.position.set(newFigPos.x, newFigPos.y, newFigPos.z);
-		if (getter(newFig)) {
+		if (holder.takeFigure(newFig)) {
 			this.deleteFigure();
 		}
 	}
