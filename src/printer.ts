@@ -16,9 +16,9 @@ import {
 } from 'three';
 import { BoxShape, Orientation } from './collisionManager';
 import { FigureName, getFigure, FigureHolder, canTakeFigure } from './figures';
-import { isKeyPressed, Key } from './keyControls';
-import { UpdateData, EventType } from './updater';
-import { getPrintFigureData } from './main';
+import { isKeyPressed, Key, keyActionCompleted } from './keyControls';
+import { UpdateData, EventType, updateCamera } from './updater';
+import { getGuiStatus, getPrintFigureData } from './main';
 
 export type PrinterSize = {
 	radius: number;
@@ -43,6 +43,8 @@ export class Printer extends BoxShape implements FigureHolder {
 	private printing: boolean = false;
 	private headMoving: boolean = false;
 	private clippingPlane: Plane = new Plane(new Vector3(0, -1, 0), 0);
+	private cameraProperties;
+
 	constructor(
 		position: Vector2,
 		size: PrinterSize,
@@ -57,6 +59,16 @@ export class Printer extends BoxShape implements FigureHolder {
 		this.clippingPlane.translate(
 			new Vector3(0, headWorldPosition.z + this.height / 2, 0)
 		);
+		this.cameraProperties = {
+			camDistance: new Vector3(40, 40, 40),
+			camTarget: () => {
+				var target = new Vector3();
+				this.mesh.getWorldPosition(target);
+				target.y += this.height / 2 + getGuiStatus().printer.figureHeight / 2;
+				return target;
+			},
+		};
+
 		this.moveHeadToBase(() => {});
 	}
 	get position(): Vector2 {
@@ -110,16 +122,43 @@ export class Printer extends BoxShape implements FigureHolder {
 	private onPressedKeys: {
 		[key in Key]?: EventType;
 	} = {
-		u: updateData => this.generateFigure(getPrintFigureData()),
+		u: _ => this.generateFigure(getPrintFigureData()),
 		g: this.handleFigure.bind(this),
 		Backspace: this.deleteFigure.bind(this),
+		2: this.setPrinterCamera.bind(this),
 	};
+
+	setPrinterCamera(updateData: UpdateData) {
+		updateCamera({
+			cameraPosition: this.cameraProperties.camDistance,
+			getTarget: this.cameraProperties.camTarget.bind(this),
+			pov: false,
+			updateData: updateData,
+			mesh: this.mesh,
+		});
+		// camera.removeFromParent();
+		// scene.add(camera);
+
+		// camera.position.set(
+		// 	this.cameraProperties.camDistance.x,
+		// 	this.cameraProperties.camDistance.y,
+		// 	this.cameraProperties.camDistance.z
+		// );
+		// const target = this.cameraProperties.camTarget();
+		// camera.lookAt(target);
+		// orbitControls.enabled = true;
+		// orbitControls.center = target;
+		// orbitControls.target = target;
+		// orbitControls.update();
+	}
+
 	handleFigure(updateData: UpdateData) {
 		updateData.entities.forEach(entity => {
 			if (entity === this) return;
 			if (this.figure !== undefined) {
 				if (canTakeFigure(entity)) {
 					this.giveFigure(entity);
+					keyActionCompleted('g');
 				}
 			}
 		});

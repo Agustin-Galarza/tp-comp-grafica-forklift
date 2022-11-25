@@ -1,6 +1,5 @@
 import { getSceneBuilder, SceneProperties } from './scene';
 import * as THREE from 'three';
-import updater from './updater';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import keyController from './keyControls';
 import CollisionManager from './collisionManager';
@@ -8,6 +7,7 @@ import { GUI } from 'dat.gui';
 import { FigureName } from './figures';
 import { ColorRepresentation, Vector3 } from 'three';
 import { PrintFigureData } from './printer';
+import { initUpdater, UpdateData } from './updater';
 
 type ControllerDef = {
 	pressed: boolean;
@@ -27,7 +27,15 @@ const guiController = {
 		figureHeight: 10 as number,
 		figureColor: '#a970ff' as ColorRepresentation,
 	},
+	forklift: {
+		followLift: false,
+	},
 };
+
+export function getGuiStatus() {
+	return guiController;
+}
+
 export function getPrintFigureData(): PrintFigureData {
 	return {
 		type: guiController.printer.figure,
@@ -50,6 +58,7 @@ const camera = new THREE.PerspectiveCamera(
 	0.1,
 	1000
 );
+camera.name = 'camera';
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.localClippingEnabled = true;
@@ -68,19 +77,24 @@ const collisionManager = new CollisionManager(
 	shelves
 );
 
+const updater = initUpdater({ scene, camera, orbitControls });
+if (updater == undefined) {
+	throw Error('Updater could not initialize');
+}
 updater.registerEvent(data => {
 	collisionManager.update(data.dt);
 });
 updater.registerEntity(forklift);
 updater.registerEntity(printer);
 updater.registerEntity(shelves);
+updater.registerEntity(hangar);
 
 setUpGUI();
 
 // Set camera
-sceneBuilder.setGlobalCamera();
-
-setUpKeyControls();
+// sceneBuilder.setGlobalCamera();
+// hangar.setGlobalCamera({ scene, camera, orbitControls } as UpdateData);
+forklift.setFirstPersonCamera({ scene, camera, orbitControls } as UpdateData);
 
 let prevTime = 0;
 
@@ -91,6 +105,7 @@ function animate(time: DOMHighResTimeStamp) {
 
 	keyController.resolveKeys();
 
+	if (updater == undefined) throw new Error('Updater is not defined');
 	updater.updateAll(dt);
 
 	renderer.render(scene, camera);
@@ -98,79 +113,10 @@ function animate(time: DOMHighResTimeStamp) {
 
 animate(prevTime);
 
-function setUpKeyControls() {
-	function controllerOf(cb: Function): ControllerDef {
-		return { pressed: false, callback: cb };
-	}
-	const cameraTypes = ['orbital', 'pov'] as const;
-	type CameraTypes = typeof cameraTypes[number];
-	let camType: CameraTypes = 'orbital';
-
-	const controls = {
-		c: controllerOf(sceneBuilder.switchCamera.bind(sceneBuilder)),
-		'1': controllerOf(() => {
-			sceneBuilder.setGlobalCamera();
-			camType = 'orbital';
-			orbitControls.enabled = true;
-			orbitControls.target.set(0, 0, 0);
-		}),
-		'2': controllerOf(() => {
-			sceneBuilder.setPrinterCamera();
-			orbitControls.enabled = true;
-			camType = 'orbital';
-			const target = new Vector3();
-			printer.mesh.getWorldPosition(target);
-			orbitControls.target.set(target.x, target.y + printer.height, target.z);
-		}),
-		'3': controllerOf(() => {
-			sceneBuilder.setShevlesCamera();
-			orbitControls.enabled = true;
-			camType = 'orbital';
-			const target = shelves.getWorldPosition();
-			orbitControls.target.set(target.x, target.y, target.z);
-		}),
-		'4': controllerOf(() => {
-			orbitControls.enabled = false;
-			camType = 'pov';
-			sceneBuilder.setFirstPersonCamera();
-		}),
-		'5': controllerOf(() => {
-			orbitControls.enabled = false;
-			camType = 'pov';
-			sceneBuilder.setThirdPersonCamera();
-		}),
-		'6': controllerOf(() => {
-			sceneBuilder.setLateralCamera();
-			orbitControls.enabled = false;
-			camType = 'pov';
-		}),
-		o: controllerOf(() => {
-			if (camType === 'pov') return;
-			const distToTarget = orbitControls.target.distanceTo(camera.position);
-			if (distToTarget > 4) {
-				camera.translateZ(-0.02 * distToTarget);
-				camera.updateProjectionMatrix();
-			}
-		}),
-		p: controllerOf(() => {
-			if (camType === 'pov') return;
-
-			const distToTarget = orbitControls.target.distanceTo(camera.position);
-			camera.translateZ(0.02 * distToTarget);
-
-			camera.updateProjectionMatrix();
-		}),
-	};
-
-	Object.entries(controls).forEach(value =>
-		keyController.addParallelKeyControl(value[0], value[1].callback)
-	);
-}
-
 function setUpGUI() {
 	const gui = new GUI();
 
-	const printerFolder = gui.addFolder('Printer');
+	const printerFolder = gui.addFolder('Impresión');
 	printerFolder
 		.add(guiController.printer, 'surfaceType', surfaceTypes)
 		.onChange(() => {
@@ -188,26 +134,30 @@ function setUpGUI() {
 				usedFigureNames
 			);
 			printerFolder.updateDisplay();
-		});
-	printerFolder.add(
-		guiController.printer,
-		'torsionAngle',
-		0,
-		2 * Math.PI,
-		0.01
-	);
-	printerFolder.addColor(guiController.printer, 'figureColor');
-	printerFolder.add(
-		guiController.printer,
-		'figureHeight',
-		0.5,
-		SceneProperties.shelves.sectionSize.height,
-		0.5
-	);
+		})
+		.name('Tipo de superficie');
+	printerFolder
+		.add(guiController.printer, 'torsionAngle', 0, 2 * Math.PI, 0.01)
+		.name('Ángulo de Torsión');
+	printerFolder
+		.addColor(guiController.printer, 'figureColor')
+		.name('Color de la fig.');
+	printerFolder
+		.add(
+			guiController.printer,
+			'figureHeight',
+			0.5,
+			SceneProperties.shelves.sectionSize.height,
+			0.5
+		)
+		.name('Altura de la fig.');
 
-	let figureController = printerFolder.add(
-		guiController.printer,
-		'figure',
-		usedFigureNames
-	);
+	let figureController = printerFolder
+		.add(guiController.printer, 'figure', usedFigureNames)
+		.name('Tipo de figura');
+
+	const forkliftFolder = gui.addFolder('Auto Elevador');
+	forkliftFolder
+		.add(guiController.forklift, 'followLift')
+		.name('Seguir Elevador');
 }

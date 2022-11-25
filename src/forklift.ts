@@ -8,19 +8,22 @@ import {
 	Vector3,
 } from 'three';
 import { getHangar, Hangar } from './hangar';
-
 import * as THREE from 'three';
 import { AABB, BoxShape, Moving, Orientation } from './collisionManager';
 import { getOwnModel } from './forkliftOwnModel';
-import { EventType, UpdateData } from './updater';
-import { isKeyPressed, Key } from './keyControls';
-import { FigureHolder, canTakeFigure, canGiveFigure } from './figures';
+import { EventType, updateCamera, UpdateData } from './updater';
+import { isKeyPressed, Key, keyActionCompleted } from './keyControls';
+import { FigureHolder, canTakeFigure } from './figures';
+import { getGuiStatus } from './main';
 
 const forkliftShininess = 50;
+
 type LiftRange = {
 	top: number;
 	bottom: number;
 };
+
+type CamType = 'first-person' | 'third-person' | 'lateral-view' | undefined;
 
 export type LiftSize = {
 	height: number;
@@ -57,6 +60,7 @@ function getForklift() {
 export class Forklift extends BoxShape implements Moving, FigureHolder {
 	private turnSensitivity: number;
 	private speed: number;
+	private size;
 	readonly mesh: Mesh;
 	private liftSize: LiftSize;
 	private liftRange: LiftRange;
@@ -68,6 +72,9 @@ export class Forklift extends BoxShape implements Moving, FigureHolder {
 	private captureThreshold;
 	private dx: number = 0;
 	private dy: number = 0;
+	private cameraProperties;
+	private camType: CamType;
+
 	constructor({
 		turnSensitivity,
 		speed,
@@ -89,11 +96,60 @@ export class Forklift extends BoxShape implements Moving, FigureHolder {
 		this.liftRange = lift.range!;
 		this.speed = speed;
 		this.hangar = getHangar()!;
+		this.size = size;
 		this.mesh = generateForkliftMesh(size, lift);
 		this.turnSensitivity = turnSensitivity;
 		this.liftSensitivity = lift.sensitivity;
 		this.figure = undefined;
 		this.captureThreshold = captureThreshold;
+
+		this.cameraProperties = {
+			firstPerson: {
+				camDistance: new Vector3(
+					-this.size.length / 6,
+					0,
+					(this.size.height * 3) / 2
+				),
+				camTarget: () => {
+					const target = new Vector3();
+
+					if (getGuiStatus().forklift.followLift) {
+						this.getLift().getWorldPosition(target);
+						return target;
+					} else {
+						this.mesh.getWorldPosition(target);
+						return target.add(
+							new Vector3(
+								10 * Math.cos(this.orientation.value),
+								this.size.height + 2,
+								-10 * Math.sin(this.orientation.value)
+							)
+						);
+					}
+				},
+			},
+			thirdPerson: {
+				camDistance: new Vector3(-30, 0, 20),
+				camTarget: () => {
+					const target = new Vector3();
+					if (getGuiStatus().forklift.followLift) {
+						this.getLift().getWorldPosition(target);
+						return target;
+					} else {
+						this.mesh.getWorldPosition(target);
+						return target.add(new Vector3(0, this.size.height, 0));
+					}
+				},
+			},
+			lateralView: {
+				camDistance: new Vector3(0, 40, 0),
+				camTarget: () => {
+					const target = new Vector3();
+					this.mesh.getWorldPosition(target);
+					return target;
+				},
+			},
+		} as const;
 	}
 	updatePosition(dx: number, dy: number): void {
 		this.dx += dx;
@@ -164,13 +220,85 @@ export class Forklift extends BoxShape implements Moving, FigureHolder {
 		e: this.liftDown.bind(this),
 		g: this.handleFigure.bind(this),
 		Backspace: this.deleteFigure.bind(this),
+		4: this.setFirstPersonCamera.bind(this),
+		5: this.setThirdPersonCamera.bind(this),
+		6: this.setLateralViewCamera.bind(this),
 	};
+
+	setThirdPersonCamera(updateData: UpdateData) {
+		this.camType = 'third-person';
+		updateCamera({
+			cameraPosition: this.cameraProperties.thirdPerson.camDistance,
+			getTarget: this.cameraProperties.thirdPerson.camTarget.bind(this),
+			pov: true,
+			updateData: updateData,
+			mesh: this.mesh,
+		});
+		// orbitControls.enabled = false;
+		// this.mesh.add(camera);
+
+		// camera.position.set(
+		// 	this.cameraProperties.thirdPerson.camDistance.x,
+		// 	this.cameraProperties.thirdPerson.camDistance.y,
+		// 	this.cameraProperties.thirdPerson.camDistance.z
+		// );
+		// camera.lookAt(this.cameraProperties.thirdPerson.camTarget());
+	}
+
+	setFirstPersonCamera(updateData: UpdateData) {
+		this.camType = 'first-person';
+		updateCamera({
+			cameraPosition: this.cameraProperties.firstPerson.camDistance,
+			getTarget: this.cameraProperties.firstPerson.camTarget.bind(this),
+			pov: true,
+			updateData: updateData,
+			mesh: this.mesh,
+		});
+		// orbitControls.enabled = false;
+		// this.mesh.add(camera);
+
+		// camera.position.set(
+		// 	this.cameraProperties.firstPerson.camDistance.x,
+		// 	this.cameraProperties.firstPerson.camDistance.y,
+		// 	this.cameraProperties.firstPerson.camDistance.z
+		// );
+		// camera.lookAt(this.cameraProperties.firstPerson.camTarget());
+	}
+
+	setLateralViewCamera(updateData: UpdateData) {
+		this.camType = 'lateral-view';
+		updateCamera({
+			cameraPosition: this.cameraProperties.lateralView.camDistance,
+			getTarget: this.cameraProperties.lateralView.camTarget.bind(this),
+			pov: true,
+			updateData: updateData,
+			mesh: this.mesh,
+		});
+		// orbitControls.enabled = false;
+		// this.mesh.add(camera);
+
+		// camera.position.set(
+		// 	this.cameraProperties.lateralView.camDistance.x,
+		// 	this.cameraProperties.lateralView.camDistance.y,
+		// 	this.cameraProperties.lateralView.camDistance.z
+		// );
+		// camera.lookAt(this.cameraProperties.lateralView.camTarget());
+	}
+
+	hasCamera(): Boolean {
+		return this.mesh.getObjectByName('camera') != undefined;
+	}
+
+	getCamType(): CamType {
+		return this.hasCamera() ? this.camType : undefined;
+	}
 
 	update(updateData: UpdateData) {
 		this.mesh.position.x += this.dx;
 		this.dx = 0;
 		this.mesh.position.y += this.dy;
 		this.dy = 0;
+
 		Object.entries(this.onPressedKeys).forEach(entry => {
 			const key = entry[0] as Key;
 			const action = entry[1];
@@ -178,6 +306,11 @@ export class Forklift extends BoxShape implements Moving, FigureHolder {
 				action(updateData);
 			}
 		});
+
+		const camType = this.getCamType();
+		if (camType === 'first-person' || camType === 'third-person') {
+			updateData.camera.lookAt(this.cameraProperties.firstPerson.camTarget());
+		}
 	}
 	private handleFigure(updateData: UpdateData) {
 		updateData.entities.forEach(entity => {
@@ -185,6 +318,7 @@ export class Forklift extends BoxShape implements Moving, FigureHolder {
 			if (this.figure !== undefined) {
 				if (canTakeFigure(entity)) {
 					this.giveFigure(entity);
+					keyActionCompleted('g');
 				}
 			}
 		});
@@ -251,6 +385,10 @@ export class Forklift extends BoxShape implements Moving, FigureHolder {
 function createForklift(properties: ForkliftProperties) {
 	return new Forklift(properties);
 }
+
+/****************************************************
+| 				Mesh							  	|
+****************************************************/
 
 function generateForkliftMesh(forkliftSize: ForkliftSize, liftData: LiftData) {
 	//body

@@ -10,7 +10,15 @@ import {
 	ArcCurve,
 } from 'three';
 import { Room } from './collisionManager';
-import { Vector2 } from 'three';
+import { Vector2, Vector3 } from 'three';
+import {
+	EventType,
+	UpdateData,
+	cameraZoomIn,
+	cameraZoomOut,
+	updateCamera,
+} from './updater';
+import { isKeyPressed, Key } from './keyControls';
 
 export type HangarSize = {
 	width: number; // x
@@ -31,6 +39,57 @@ export class Hangar extends Room {
 	}
 	// @ts-ignore
 	set position(newPos: THREE.Vector2) {}
+
+	private onPressedKeys: {
+		[key in Key]?: EventType;
+	} = {
+		1: this.setGlobalCamera.bind(this),
+		o: this.zoomIn.bind(this),
+		p: this.zoomOut.bind(this),
+	};
+
+	private cameraProperties = {
+		globalDistance: 40,
+	};
+
+	setGlobalCamera(updateData: UpdateData) {
+		updateCamera({
+			cameraPosition: new Vector3().setScalar(
+				this.cameraProperties.globalDistance
+			),
+			getTarget: () => new Vector3(0, 0, 0),
+			pov: false,
+			updateData: updateData,
+			mesh: this.mesh,
+		});
+		// orbitControls.enabled = true;
+		// scene.add(camera);
+
+		// camera.position.set(
+		// 	this.cameraProperties.globalDistance,
+		// 	this.cameraProperties.globalDistance,
+		// 	this.cameraProperties.globalDistance
+		// );
+		// camera.lookAt(0, 0, 0);
+	}
+
+	zoomIn(updateData: UpdateData) {
+		cameraZoomIn(0.02, updateData);
+	}
+
+	zoomOut(updateData: UpdateData) {
+		cameraZoomOut(0.02, updateData);
+	}
+
+	update(updateData: UpdateData) {
+		Object.entries(this.onPressedKeys).forEach(entry => {
+			const key = entry[0] as Key;
+			const action = entry[1];
+			if (isKeyPressed[key]) {
+				action(updateData);
+			}
+		});
+	}
 }
 
 function createHangar(size: HangarSize) {

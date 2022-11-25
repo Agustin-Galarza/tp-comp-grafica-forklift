@@ -9,8 +9,8 @@ import {
 } from 'three';
 import { BoxShape, Orientation } from './collisionManager';
 import { FigureHolder, canTakeFigure } from './figures';
-import { isKeyPressed, Key } from './keyControls';
-import { UpdateData } from './updater';
+import { isKeyPressed, Key, keyActionCompleted } from './keyControls';
+import { EventType, updateCamera, UpdateData } from './updater';
 
 export type Size3 = {
 	width: number;
@@ -55,6 +55,8 @@ export class Shelves extends BoxShape implements FigureHolder {
 	private objects: (Object3D | undefined)[];
 	private captureThreshold;
 	private baseHeight;
+	private cameraProperties;
+
 	constructor(
 		position: Vector2,
 		orientation: Orientation,
@@ -86,6 +88,13 @@ export class Shelves extends BoxShape implements FigureHolder {
 		this.position = position;
 		this.objects = new Array(this.sections.horizontal * this.sections.vertical);
 		this.captureThreshold = captureThreshold;
+
+		this.cameraProperties = {
+			camDistance: new Vector3(40, 40, 40),
+			camTarget: () => {
+				return this.getWorldPosition();
+			},
+		} as const;
 	}
 
 	get position(): Vector2 {
@@ -178,15 +187,57 @@ export class Shelves extends BoxShape implements FigureHolder {
 		).add(pos);
 	}
 
+	private onPressedKeys: {
+		[key in Key]?: EventType;
+	} = {
+		g: this.giveFigures.bind(this),
+		3: this.setShelvesCamera.bind(this),
+	};
+
+	setShelvesCamera(updateData: UpdateData) {
+		updateCamera({
+			cameraPosition: this.cameraProperties.camDistance,
+			getTarget: this.cameraProperties.camTarget.bind(this),
+			pov: false,
+			updateData: updateData,
+			mesh: this.mesh,
+		});
+		// camera.removeFromParent();
+		// scene.add(camera);
+
+		// camera.position.set(
+		// 	this.cameraProperties.camDistance.x,
+		// 	this.cameraProperties.camDistance.y,
+		// 	this.cameraProperties.camDistance.z
+		// );
+		// const target = this.cameraProperties.camTarget();
+		// camera.lookAt(target);
+		// orbitControls.enabled = true;
+		// orbitControls.center = target;
+		// orbitControls.target = target;
+		// orbitControls.update();
+	}
+
+	private giveFigures(updateData: UpdateData) {
+		updateData.entities.forEach(entity => {
+			if (entity === this) return;
+			if (canTakeFigure(entity)) {
+				this.giveFigure(entity);
+				keyActionCompleted('g');
+			}
+		});
+	}
+
 	update(updateData: UpdateData) {
-		const actionKey: Key = 't';
+		Object.entries(this.onPressedKeys).forEach(entry => {
+			const key = entry[0] as Key;
+			const action = entry[1];
+			if (isKeyPressed[key]) {
+				action(updateData);
+			}
+		});
+		const actionKey: Key = 'g';
 		if (isKeyPressed[actionKey]) {
-			updateData.entities.forEach(entity => {
-				if (entity === this) return;
-				if (canTakeFigure(entity)) {
-					this.giveFigure(entity);
-				}
-			});
 		}
 	}
 

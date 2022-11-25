@@ -70,6 +70,10 @@ function resolveKeys(): void {
 	});
 }
 
+function keyActionCompleted(key: Key) {
+	isKeyPressed[key] = false;
+}
+
 const keyController = {
 	addParallelKeyControl,
 	removeParallelKeyControl,
@@ -77,4 +81,4 @@ const keyController = {
 };
 
 export default keyController;
-export { isKeyPressed };
+export { isKeyPressed, keyActionCompleted };
