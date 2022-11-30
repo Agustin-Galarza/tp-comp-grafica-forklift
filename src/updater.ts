@@ -1,6 +1,7 @@
 import { Object3D, Scene, PerspectiveCamera, Vector3, Mesh } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { BoxShape } from './collisionManager';
+import { Key } from './keyControls';
 
 export type UpdateData = {
 	dt: number;
@@ -10,9 +11,11 @@ export type UpdateData = {
 	orbitControls: OrbitControls;
 };
 
-export type Entity = (Object3D | BoxShape) & {
+type Updatable = {
 	update(updateData: UpdateData): void;
 };
+
+export type Entity = (Object3D | BoxShape) & Updatable;
 
 export type EventType =
 	| ((data: UpdateData) => {})

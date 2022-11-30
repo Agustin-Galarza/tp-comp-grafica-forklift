@@ -54,7 +54,7 @@ export const CONSTANTS = {
 
 // scene object that handles object creation
 // add initialize method for this
-function getSceneBuilder(mainCamera: THREE.PerspectiveCamera) {
+function getSceneBuilder() {
 	let forklift: Forklift;
 	let hangar: Hangar;
 	let scene: Scene;

@@ -62,15 +62,6 @@ export class Hangar extends Room {
 			updateData: updateData,
 			mesh: this.mesh,
 		});
-		// orbitControls.enabled = true;
-		// scene.add(camera);
-
-		// camera.position.set(
-		// 	this.cameraProperties.globalDistance,
-		// 	this.cameraProperties.globalDistance,
-		// 	this.cameraProperties.globalDistance
-		// );
-		// camera.lookAt(0, 0, 0);
 	}
 
 	zoomIn(updateData: UpdateData) {

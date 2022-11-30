@@ -234,15 +234,6 @@ export class Forklift extends BoxShape implements Moving, FigureHolder {
 			updateData: updateData,
 			mesh: this.mesh,
 		});
-		// orbitControls.enabled = false;
-		// this.mesh.add(camera);
-
-		// camera.position.set(
-		// 	this.cameraProperties.thirdPerson.camDistance.x,
-		// 	this.cameraProperties.thirdPerson.camDistance.y,
-		// 	this.cameraProperties.thirdPerson.camDistance.z
-		// );
-		// camera.lookAt(this.cameraProperties.thirdPerson.camTarget());
 	}
 
 	setFirstPersonCamera(updateData: UpdateData) {
@@ -254,15 +245,6 @@ export class Forklift extends BoxShape implements Moving, FigureHolder {
 			updateData: updateData,
 			mesh: this.mesh,
 		});
-		// orbitControls.enabled = false;
-		// this.mesh.add(camera);
-
-		// camera.position.set(
-		// 	this.cameraProperties.firstPerson.camDistance.x,
-		// 	this.cameraProperties.firstPerson.camDistance.y,
-		// 	this.cameraProperties.firstPerson.camDistance.z
-		// );
-		// camera.lookAt(this.cameraProperties.firstPerson.camTarget());
 	}
 
 	setLateralViewCamera(updateData: UpdateData) {
@@ -274,15 +256,6 @@ export class Forklift extends BoxShape implements Moving, FigureHolder {
 			updateData: updateData,
 			mesh: this.mesh,
 		});
-		// orbitControls.enabled = false;
-		// this.mesh.add(camera);
-
-		// camera.position.set(
-		// 	this.cameraProperties.lateralView.camDistance.x,
-		// 	this.cameraProperties.lateralView.camDistance.y,
-		// 	this.cameraProperties.lateralView.camDistance.z
-		// );
-		// camera.lookAt(this.cameraProperties.lateralView.camTarget());
 	}
 
 	hasCamera(): Boolean {

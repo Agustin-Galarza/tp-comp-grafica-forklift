@@ -202,20 +202,6 @@ export class Shelves extends BoxShape implements FigureHolder {
 			updateData: updateData,
 			mesh: this.mesh,
 		});
-		// camera.removeFromParent();
-		// scene.add(camera);
-
-		// camera.position.set(
-		// 	this.cameraProperties.camDistance.x,
-		// 	this.cameraProperties.camDistance.y,
-		// 	this.cameraProperties.camDistance.z
-		// );
-		// const target = this.cameraProperties.camTarget();
-		// camera.lookAt(target);
-		// orbitControls.enabled = true;
-		// orbitControls.center = target;
-		// orbitControls.target = target;
-		// orbitControls.update();
 	}
 
 	private giveFigures(updateData: UpdateData) {
@@ -236,9 +222,6 @@ export class Shelves extends BoxShape implements FigureHolder {
 				action(updateData);
 			}
 		});
-		const actionKey: Key = 'g';
-		if (isKeyPressed[actionKey]) {
-		}
 	}
 
 	giveFigure(holder: FigureHolder): void {

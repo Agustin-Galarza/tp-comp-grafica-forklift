@@ -136,20 +136,6 @@ export class Printer extends BoxShape implements FigureHolder {
 			updateData: updateData,
 			mesh: this.mesh,
 		});
-		// camera.removeFromParent();
-		// scene.add(camera);
-
-		// camera.position.set(
-		// 	this.cameraProperties.camDistance.x,
-		// 	this.cameraProperties.camDistance.y,
-		// 	this.cameraProperties.camDistance.z
-		// );
-		// const target = this.cameraProperties.camTarget();
-		// camera.lookAt(target);
-		// orbitControls.enabled = true;
-		// orbitControls.center = target;
-		// orbitControls.target = target;
-		// orbitControls.update();
 	}
 
 	handleFigure(updateData: UpdateData) {

@@ -66,7 +66,7 @@ document.body.appendChild(renderer.domElement);
 let orbitControls = new OrbitControls(camera, renderer.domElement);
 orbitControls.enablePan = false;
 
-const sceneBuilder = getSceneBuilder(camera);
+const sceneBuilder = getSceneBuilder();
 
 const { scene, forklift, hangar, printer, shelves } = sceneBuilder.initialize();
 
@@ -93,8 +93,8 @@ setUpGUI();
 
 // Set camera
 // sceneBuilder.setGlobalCamera();
-// hangar.setGlobalCamera({ scene, camera, orbitControls } as UpdateData);
-forklift.setFirstPersonCamera({ scene, camera, orbitControls } as UpdateData);
+hangar.setGlobalCamera({ scene, camera, orbitControls } as UpdateData);
+// forklift.setFirstPersonCamera({ scene, camera, orbitControls } as UpdateData);
 
 let prevTime = 0;
 
