@@ -209,7 +209,7 @@ export class Printer extends BoxShape implements FigureHolder {
 		return this.figure;
 	}
 	deleteFigure() {
-		if (!this.figure) return;
+		if (!this.figure || !this.canPickFigure()) return;
 		this.mesh.remove(this.figure);
 		this.figure = undefined;
 		this.moveHeadToBase(() => {});
