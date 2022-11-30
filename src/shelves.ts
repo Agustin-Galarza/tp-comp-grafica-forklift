@@ -192,7 +192,15 @@ export class Shelves extends BoxShape implements FigureHolder {
 	} = {
 		g: this.giveFigures.bind(this),
 		3: this.setShelvesCamera.bind(this),
+		c: this.removeAllFigures.bind(this),
 	};
+
+	removeAllFigures(updateData: UpdateData) {
+		this.objects.forEach(object => {
+			if (object) this.mesh.remove(object);
+		});
+		this.objects = new Array(this.sections.horizontal * this.sections.vertical);
+	}
 
 	setShelvesCamera(updateData: UpdateData) {
 		updateCamera({
