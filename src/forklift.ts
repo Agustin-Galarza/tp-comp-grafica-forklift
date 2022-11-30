@@ -209,7 +209,7 @@ export class Forklift extends BoxShape implements Moving, FigureHolder {
 		};
 	}
 
-	private onPressedKeys: {
+	onPressedKeys: {
 		[key in Key]?: EventType;
 	} = {
 		w: this.accelerate.bind(this),
@@ -271,14 +271,6 @@ export class Forklift extends BoxShape implements Moving, FigureHolder {
 		this.dx = 0;
 		this.mesh.position.y += this.dy;
 		this.dy = 0;
-
-		Object.entries(this.onPressedKeys).forEach(entry => {
-			const key = entry[0] as Key;
-			const action = entry[1];
-			if (isKeyPressed[key]) {
-				action(updateData);
-			}
-		});
 
 		const camType = this.getCamType();
 		if (camType === 'first-person' || camType === 'third-person') {

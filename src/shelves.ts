@@ -187,7 +187,7 @@ export class Shelves extends BoxShape implements FigureHolder {
 		).add(pos);
 	}
 
-	private onPressedKeys: {
+	onPressedKeys: {
 		[key in Key]?: EventType;
 	} = {
 		g: this.giveFigures.bind(this),
@@ -214,15 +214,7 @@ export class Shelves extends BoxShape implements FigureHolder {
 		});
 	}
 
-	update(updateData: UpdateData) {
-		Object.entries(this.onPressedKeys).forEach(entry => {
-			const key = entry[0] as Key;
-			const action = entry[1];
-			if (isKeyPressed[key]) {
-				action(updateData);
-			}
-		});
-	}
+	update(updateData: UpdateData) {}
 
 	giveFigure(holder: FigureHolder): void {
 		for (let i = 0; i < this.objects.length; i++) {

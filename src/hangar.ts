@@ -72,15 +72,7 @@ export class Hangar extends Room {
 		cameraZoomOut(0.02, updateData);
 	}
 
-	update(updateData: UpdateData) {
-		Object.entries(this.onPressedKeys).forEach(entry => {
-			const key = entry[0] as Key;
-			const action = entry[1];
-			if (isKeyPressed[key]) {
-				action(updateData);
-			}
-		});
-	}
+	update(updateData: UpdateData) {}
 }
 
 function createHangar(size: HangarSize) {

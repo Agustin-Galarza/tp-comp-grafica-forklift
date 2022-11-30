@@ -119,7 +119,7 @@ export class Printer extends BoxShape implements FigureHolder {
 			this.moveHead(distance - stepDistance, steps - 1, andThen);
 		}, 0.1);
 	}
-	private onPressedKeys: {
+	onPressedKeys: {
 		[key in Key]?: EventType;
 	} = {
 		u: _ => this.generateFigure(getPrintFigureData()),
@@ -149,15 +149,8 @@ export class Printer extends BoxShape implements FigureHolder {
 			}
 		});
 	}
-	update(updateData: UpdateData) {
-		Object.entries(this.onPressedKeys).forEach(entry => {
-			const key = entry[0] as Key;
-			const action = entry[1];
-			if (isKeyPressed[key]) {
-				action(updateData);
-			}
-		});
-	}
+	update(updateData: UpdateData) {}
+
 	moveHeadToBase(andThen: Function) {
 		const pole: Object3D = this.mesh.getObjectByName(poleName)!;
 		const head: Object3D = this.mesh.getObjectByName(headName)!;

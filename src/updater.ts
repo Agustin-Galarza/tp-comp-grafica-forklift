@@ -1,7 +1,7 @@
 import { Object3D, Scene, PerspectiveCamera, Vector3, Mesh } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { BoxShape } from './collisionManager';
-import { Key } from './keyControls';
+import { isKeyPressed, Key } from './keyControls';
 
 export type UpdateData = {
 	dt: number;
@@ -13,6 +13,9 @@ export type UpdateData = {
 
 type Updatable = {
 	update(updateData: UpdateData): void;
+	onPressedKeys: {
+		[key in Key]?: EventType;
+	};
 };
 
 export type Entity = (Object3D | BoxShape) & Updatable;
@@ -107,7 +110,16 @@ export function initUpdater(properties: UpdaterProperties) {
 			orbitControls,
 		};
 		events.forEach(ev => ev(updateData));
-		entities.forEach(entity => entity.update(updateData));
+		entities.forEach(entity => {
+			Object.entries(entity.onPressedKeys).forEach(entry => {
+				const key = entry[0] as Key;
+				const action = entry[1];
+				if (isKeyPressed[key]) {
+					action(updateData);
+				}
+			});
+			entity.update(updateData);
+		});
 	}
 	function registerEvent(updater: EventType) {
 		events.push(updater);
