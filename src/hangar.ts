@@ -40,7 +40,7 @@ export class Hangar extends Room {
 	// @ts-ignore
 	set position(newPos: THREE.Vector2) {}
 
-	private onPressedKeys: {
+	onPressedKeys: {
 		[key in Key]?: EventType;
 	} = {
 		1: this.setGlobalCamera.bind(this),
