@@ -92,7 +92,6 @@ updater.registerEntity(hangar);
 setUpGUI();
 
 // Set camera
-// sceneBuilder.setGlobalCamera();
 hangar.setGlobalCamera({ scene, camera, orbitControls } as UpdateData);
 // forklift.setFirstPersonCamera({ scene, camera, orbitControls } as UpdateData);
 

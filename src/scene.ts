@@ -53,7 +53,6 @@ export const CONSTANTS = {
 } as const;
 
 // scene object that handles object creation
-// add initialize method for this
 function getSceneBuilder() {
 	let forklift: Forklift;
 	let hangar: Hangar;
@@ -63,12 +62,12 @@ function getSceneBuilder() {
 	function initialize() {
 		scene = new THREE.Scene();
 
-		scene.add(new THREE.AmbientLight(0x707070, 0.5));
-		addLights(scene);
-
 		// create hangar
 		hangar = createHangar(CONSTANTS.hangar.size);
 		scene.add(hangar.mesh);
+
+		scene.add(new THREE.AmbientLight(0x707070, 0.5));
+		addLights(scene, (x, y) => hangar.getRoofHeightAt(new Vector2(x, y)));
 
 		// create forklift
 		forklift = createForklift(CONSTANTS.forklift.properties);
@@ -112,28 +111,40 @@ function getSceneBuilder() {
 	};
 }
 
-function addLights(scene: Scene) {
-	const height = CONSTANTS.hangar.size.height * 1.2;
+function addLights(
+	scene: Scene,
+	getRoofHeight: (x: number, y: number) => number
+) {
+	const height = CONSTANTS.hangar.size.height * 1.3;
 	const maxLen = CONSTANTS.hangar.size.length / 2;
 	const maxWidth = CONSTANTS.hangar.size.width / 2;
+
 	// add central lights
 	const pos = new Vector3();
 	pos.setY(height);
 	const zValues = [maxLen / 2, 0, -maxLen / 2];
+
 	for (const zVal of zValues) {
-		pos.setZ(zVal);
-		pos.setX(0);
-		addRoomLight(scene, pos);
-		pos.setX(-maxWidth / 2);
-		addRoomLight(scene, pos);
-		pos.setX(maxWidth / 2);
-		addRoomLight(scene, pos);
+		let x, y;
+		x = 0;
+		y = zVal;
+		pos.setZ(y);
+		pos.setX(x);
+		addRoomLight(scene, pos, getRoofHeight(x, y));
+		x = -maxWidth / 2;
+		pos.setX(x);
+		addRoomLight(scene, pos, getRoofHeight(x, y));
+		x = maxWidth / 2;
+		pos.setX(x);
+		addRoomLight(scene, pos, getRoofHeight(x, y));
 	}
 }
 
-function addRoomLight(scene: Scene, position: Vector3) {
-	const sl = generateSpotlight(position);
+function addRoomLight(scene: Scene, position: Vector3, roofHeight: number) {
+	const sl = generateSpotlight(position, roofHeight);
 	scene.add(sl.light);
+	// const slh = new THREE.SpotLightHelper(sl.light);
+	// scene.add(slh);
 	scene.add(sl.mesh);
 }
 

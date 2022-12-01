@@ -8,6 +8,9 @@ import {
 	Shape,
 	ShapeBufferGeometry,
 	ArcCurve,
+	SphereGeometry,
+	MeshBasicMaterial,
+	AxesHelper,
 } from 'three';
 import { Room } from './collisionManager';
 import { Vector2, Vector3 } from 'three';
@@ -18,7 +21,7 @@ import {
 	cameraZoomOut,
 	updateCamera,
 } from './updater';
-import { isKeyPressed, Key } from './keyControls';
+import { Key } from './keyControls';
 
 export type HangarSize = {
 	width: number; // x
@@ -73,14 +76,46 @@ export class Hangar extends Room {
 	}
 
 	update(updateData: UpdateData) {}
+
+	getRoofHeightAt(position: Vector2): number {
+		const { roofRadius, roofHalfTheta, roofPosition } = generateRoofProperties(
+			this.height,
+			this.width
+		);
+		const radius = roofRadius;
+		const angle = (position.x / (this.width / 2)) * roofHalfTheta;
+		return radius * Math.cos(angle) + roofPosition.z;
+	}
 }
 
 function createHangar(size: HangarSize) {
-	return new Hangar(size);
+	hangar = new Hangar(size);
+	return hangar;
 }
 
 function getHangar() {
 	return hangar;
+}
+
+function generateRoofProperties(
+	height: number,
+	width: number
+): {
+	roofHeight: number;
+	roofRadius: number;
+	roofHalfTheta: number;
+	roofPosition: Vector3;
+} {
+	const roofHeight = height / 2;
+	const roofRadius = width ** 2 / (8 * roofHeight) + roofHeight / 2;
+	const roofHalfTheta = Math.atan(width / 2 / (roofRadius - roofHeight));
+	const roofPosition = new Vector3(0, 0, -(roofRadius - height - roofHeight));
+	return {
+		roofHeight,
+		roofRadius,
+		roofHalfTheta,
+		roofPosition,
+	};
 }
 
 function generateHangarMesh(size: HangarSize): Mesh {
@@ -100,11 +135,8 @@ function generateHangarMesh(size: HangarSize): Mesh {
 	// floorMesh.rotateZ(-Math.PI / 2);
 
 	// create roof
-	const roofHeight = size.height / 2;
-	const roofRadius = size.width ** 2 / (8 * roofHeight) + roofHeight / 2;
-	const l = size.width / 2;
-	const roofHalfAngle = Math.atan(l / (roofRadius - roofHeight));
-	// const roofHalfAngle = Math.PI;
+	const { roofHeight, roofRadius, roofHalfTheta, roofPosition } =
+		generateRoofProperties(size.height, size.width);
 	geo = new CylinderGeometry(
 		roofRadius,
 		roofRadius,
@@ -112,8 +144,8 @@ function generateHangarMesh(size: HangarSize): Mesh {
 		100,
 		10,
 		true,
-		-roofHalfAngle,
-		roofHalfAngle * 2
+		-roofHalfTheta,
+		roofHalfTheta * 2
 	);
 	mat = new THREE.MeshStandardMaterial({
 		color: 0xc1dbe5,
@@ -122,7 +154,7 @@ function generateHangarMesh(size: HangarSize): Mesh {
 	let roofMesh = new Mesh(geo, mat);
 
 	floorMesh.add(roofMesh);
-	roofMesh.position.set(0, 0, -(roofRadius - size.height - roofHeight));
+	roofMesh.position.set(roofPosition.x, roofPosition.y, roofPosition.z);
 
 	//create walls
 	for (let i = 0; i < 4; i++) {
@@ -142,8 +174,8 @@ function generateHangarMesh(size: HangarSize): Mesh {
 			const topWallMesh = new Mesh(
 				createWallTopGeometry(
 					roofRadius,
-					Math.PI / 2 - roofHalfAngle,
-					Math.PI / 2 + roofHalfAngle
+					Math.PI / 2 - roofHalfTheta,
+					Math.PI / 2 + roofHalfTheta
 				),
 				mat
 			);
