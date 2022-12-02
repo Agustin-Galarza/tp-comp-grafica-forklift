@@ -22,6 +22,7 @@ import {
 	updateCamera,
 } from './updater';
 import { Key } from './keyControls';
+import { loadTexture } from './textureLoader';
 
 export type HangarSize = {
 	width: number; // x
@@ -126,8 +127,16 @@ function generateHangarMesh(size: HangarSize): Mesh {
 		100,
 		100
 	);
+
+	const { texture, normal } = loadTexture({
+		textureName: 'StoneTilesFloor01_1K_BaseColor.png',
+		repeat: new Vector2(5, 5),
+		// normalMapName: 'StoneTilesFloor01_1K_Normal.png',
+		normalMapName: 'CorrugatedMetalPanel02_1K_Normal.png',
+	});
 	let mat: Material = new THREE.MeshStandardMaterial({
-		color: 0x826f57,
+		map: texture,
+		normalMap: normal,
 	});
 	let floorMesh = new Mesh(geo, mat);
 
