@@ -87,7 +87,7 @@ class SpotlightModel {
 			new CylinderGeometry(cableWidth, cableWidth, cableHeight),
 			new MeshBasicMaterial({ color: 0x000000 })
 		);
-		cable.position.set(0, cableHeight / 2, 0);
+		cable.position.set(0, cableHeight / 2 + height / 2 + 0.5, 0);
 		lampMesh.add(cable);
 
 		return lampMesh;
