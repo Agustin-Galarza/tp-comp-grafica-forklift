@@ -1,15 +1,20 @@
 import {
+	AxesHelper,
 	BoxGeometry,
 	BufferGeometry,
+	Color,
 	ColorRepresentation,
 	CylinderGeometry,
 	Event,
 	Group,
 	Material,
 	Mesh,
+	MeshBasicMaterial,
 	MeshPhongMaterial,
 	Object3D,
 	Plane,
+	PointLight,
+	SphereGeometry,
 	TorusGeometry,
 	Vector2,
 	Vector3,
@@ -19,6 +24,7 @@ import { FigureName, getFigure, FigureHolder, canTakeFigure } from './figures';
 import { isKeyPressed, Key, keyActionCompleted } from './keyControls';
 import { UpdateData, EventType, updateCamera } from './updater';
 import { getGuiStatus, getPrintFigureData } from './main';
+import { loadEnvMap } from './textureLoader';
 
 export type PrinterSize = {
 	radius: number;
@@ -226,13 +232,17 @@ function createPrinter(
 	return printer;
 }
 
+let changeLightsColor: Function | undefined = undefined;
+
 function generatePrinterMesh(size: PrinterSize, maxFigureHeight: number) {
 	const shininess = 20;
-	const radialSegments = 8;
+	const radialSegments = 20;
 	const platformHeight = 0.5;
 	const poleWidth = 0.4;
 	const poleHeight = size.height + maxFigureHeight + 3;
 	const ringWidth = size.radius / 10;
+	const lightsColor = 0xffffff;
+
 	//create body
 	let geometry: BufferGeometry = new CylinderGeometry(
 		size.radius,
@@ -242,39 +252,60 @@ function generatePrinterMesh(size: PrinterSize, maxFigureHeight: number) {
 	);
 	let material: Material = new MeshPhongMaterial({
 		color: 0xf28c28,
-		shininess,
+		shininess: shininess * 4,
+		envMap: loadEnvMap({ name: 'greyRoom', type: 'cube' }),
+		reflectivity: 0.5,
+		// emissive: 0x333333,
+		specular: 0x888888,
 	});
 	const bodyMesh = new Mesh(geometry, material);
 	bodyMesh.rotateX(Math.PI / 2);
 
 	// create platform
 	geometry = new CylinderGeometry(
-		size.radius + 0.05,
-		size.radius + 0.05,
+		size.radius,
+		size.radius,
 		platformHeight - ringWidth,
 		radialSegments
 	);
-	material = new MeshPhongMaterial({ color: 0x26afe3, shininess });
+	material = new MeshPhongMaterial({
+		color: 0x26afe3,
+		specular: lightsColor,
+		shininess: shininess,
+		envMap: loadEnvMap({ name: 'greyRoom', type: 'cube' }),
+		reflectivity: 0.3,
+	});
 	let _mesh = new Mesh(geometry, material);
+	_mesh.name = 'platform';
 	bodyMesh.add(_mesh);
 	_mesh.position.set(0, size.height / 2 - platformHeight / 2, 0);
 
 	// create ring
 	geometry = new TorusGeometry(
-		size.radius - ringWidth + 0.05,
+		size.radius - ringWidth + 0.1,
 		ringWidth,
 		3,
 		radialSegments
 	);
-	material = new MeshPhongMaterial({ color: 0x26afe3, shininess });
+	material = new MeshPhongMaterial({
+		color: 0x26afe3,
+		specular: lightsColor,
+		shininess: shininess,
+		envMap: loadEnvMap({ name: 'greyRoom', type: 'cube' }),
+		reflectivity: 0.3,
+	});
 	_mesh = new Mesh(geometry, material);
+	_mesh.name = 'ring';
 	bodyMesh.add(_mesh);
 	_mesh.rotateX(Math.PI / 2);
 	_mesh.position.set(0, size.height / 2, 0);
 
 	// create pole
 	geometry = new BoxGeometry(poleWidth, poleHeight, poleWidth);
-	material = new MeshPhongMaterial({ color: 0x9eb1b8, shininess });
+	material = new MeshPhongMaterial({
+		color: 0x9eb1b8,
+		shininess: shininess * 2,
+	});
 	const poleMesh = new Mesh(geometry, material);
 	bodyMesh.add(poleMesh);
 	poleMesh.name = poleName;
@@ -286,13 +317,22 @@ function generatePrinterMesh(size: PrinterSize, maxFigureHeight: number) {
 
 	// create head
 	const headWidth = size.radius * 2 * 0.7;
-	const headHeight = 0.7;
+	const headHeight = 0.4;
 	const headLen = size.radius * 2 * 0.9;
 	const headColor = 0x4b7ece;
 
+	const lightsRadius = headHeight;
+	const lightsIntensity = 0.5;
+	const lightsDistance = poleHeight * 1.5;
+	const lightsDecay = 3;
+
 	const head = new Group();
 
-	material = new MeshPhongMaterial({ color: headColor });
+	material = new MeshPhongMaterial({
+		color: headColor,
+		envMap: loadEnvMap({ name: 'greyRoom', type: 'cube' }),
+		reflectivity: 0.15,
+	});
 
 	// / base
 	geometry = new BoxGeometry(poleWidth + 0.1, headHeight, poleWidth + 0.1);
@@ -311,12 +351,71 @@ function generatePrinterMesh(size: PrinterSize, maxFigureHeight: number) {
 	_mesh = new Mesh(geometry, material);
 	_mesh.rotateY(-Math.PI / 2);
 	_mesh.translateZ(headLen / 2 + (size.radius - headLen / 2));
+
+	// / / lights
+	const lightsGeometry = new SphereGeometry(lightsRadius);
+	const lightsMaterial = new MeshBasicMaterial({
+		color: lightsColor,
+	});
+
+	const lightsArray: Array<{
+		light: PointLight;
+		mesh: Mesh<SphereGeometry, MeshBasicMaterial>;
+	}> = [];
+
+	const addLight = (i: number) => {
+		const lightMesh = new Mesh(lightsGeometry, lightsMaterial);
+		const light = new PointLight(
+			lightsColor,
+			lightsIntensity,
+			lightsDistance,
+			lightsDecay
+		);
+
+		_mesh.add(light);
+		_mesh.add(lightMesh);
+		lightsArray.push({ light, mesh: lightMesh });
+
+		const x = (headWidth / 2) * (i % 2 ? 1 : -1);
+		const z = (headLen / 2) * (i < 2 ? 1 : -1);
+
+		lightMesh.position.set(x, 0, z);
+		light.position.set(x, 0, z);
+	};
+
+	for (let i = 0; i < 4; i++) addLight(i);
+
 	head.add(_mesh);
 
 	poleMesh.add(head);
 	head.name = headName;
 
+	changeLightsColor = (color: ColorRepresentation) => {
+		const newColor = new Color(color);
+		lightsArray.forEach(obj => {
+			obj.light.color = newColor;
+			obj.mesh.material.color = newColor;
+		});
+		(
+			bodyMesh.getObjectByName('ring') as Mesh<
+				BufferGeometry,
+				MeshPhongMaterial
+			>
+		).material.specular = newColor;
+		(
+			bodyMesh.getObjectByName('platform') as Mesh<
+				BufferGeometry,
+				MeshPhongMaterial
+			>
+		).material.specular = newColor;
+	};
+
 	return bodyMesh;
 }
 
-export { createPrinter };
+function changePrinterLightsColor(color: ColorRepresentation) {
+	if (changeLightsColor === undefined) return;
+	changeLightsColor(color);
+}
+
+export { createPrinter, changePrinterLightsColor };

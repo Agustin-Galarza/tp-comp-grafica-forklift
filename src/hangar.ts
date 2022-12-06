@@ -128,16 +128,13 @@ function generateHangarMesh(size: HangarSize): Mesh {
 		100
 	);
 
-	let { textureMap, normalMap } = loadTexture({
+	let { map, normalMap } = loadTexture({
 		textureName: 'StoneTilesFloor01_1K_BaseColor.png',
 		repeat: new Vector2(5, 5),
 		// normalMapName: 'StoneTilesFloor01_1K_Normal.png',
 		normalMapName: 'StoneTilesFloor01_1K_Normal.png',
 	});
-	let mat: Material = new THREE.MeshStandardMaterial({
-		map: textureMap,
-		normalMap: normalMap,
-	});
+	let mat: Material = new THREE.MeshStandardMaterial({ map, normalMap });
 	let floorMesh = new Mesh(geo, mat);
 
 	floorMesh.rotateX(-Math.PI / 2);
@@ -156,13 +153,11 @@ function generateHangarMesh(size: HangarSize): Mesh {
 		-roofHalfTheta,
 		roofHalfTheta * 2
 	);
-	textureMap = loadTexture({
+	map = loadTexture({
 		textureName: 'Rusted-Tin-Roof-Architextures.jpg',
 		repeat: new Vector2(2, 2),
-	} as TextureLoadParams).textureMap;
-	mat = new THREE.MeshStandardMaterial({
-		map: textureMap,
-	});
+	} as TextureLoadParams).map;
+	mat = new THREE.MeshStandardMaterial({ map });
 	mat.side = BackSide;
 	let roofMesh = new Mesh(geo, mat);
 
@@ -170,26 +165,19 @@ function generateHangarMesh(size: HangarSize): Mesh {
 	roofMesh.position.set(roofPosition.x, roofPosition.y, roofPosition.z);
 
 	//create walls
-	let wallTextureObj = loadTexture({
+	({ map, normalMap } = loadTexture({
 		textureName: 'CorrugatedMetalPanel02_1K_BaseColor.png',
 		repeat: new Vector2(4, 1),
 		normalMapName: 'CorrugatedMetalPanel02_1K_Normal.png',
-	} as TextureLoadParams);
-	let topWallTextureObj = loadTexture({
-		textureName: 'CorrugatedMetalPanel02_1K_BaseColor.png',
-		repeat: new Vector2(4, 1),
-		normalMapName: 'CorrugatedMetalPanel02_1K_Normal.png',
-	} as TextureLoadParams);
+	} as TextureLoadParams));
+	mat = new THREE.MeshStandardMaterial({ map, normalMap });
 
-	mat = new THREE.MeshStandardMaterial({
-		map: wallTextureObj.textureMap,
-		normalMap: wallTextureObj.normalMap,
-	});
-	const topWallMat = new THREE.MeshStandardMaterial({
-		map: topWallTextureObj.textureMap,
-		normalMap: topWallTextureObj.normalMap,
-		// wireframe: true,
-	});
+	({ map, normalMap } = loadTexture({
+		textureName: 'CorrugatedMetalPanel02_1K_BaseColor.png',
+		repeat: new Vector2(4, 1),
+		normalMapName: 'CorrugatedMetalPanel02_1K_Normal.png',
+	} as TextureLoadParams));
+	const topWallMat = new THREE.MeshStandardMaterial({ map, normalMap });
 
 	for (let i = 0; i < 4; i++) {
 		let width,

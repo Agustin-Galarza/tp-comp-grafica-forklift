@@ -5,8 +5,8 @@ import keyController from './keyControls';
 import CollisionManager from './collisionManager';
 import { GUI } from 'dat.gui';
 import { FigureName } from './figures';
-import { ColorRepresentation, Vector3 } from 'three';
-import { PrintFigureData } from './printer';
+import { Color, ColorRepresentation, Vector3 } from 'three';
+import { changePrinterLightsColor, PrintFigureData } from './printer';
 import { initUpdater, UpdateData } from './updater';
 
 type ControllerDef = {
@@ -26,6 +26,7 @@ const guiController = {
 		torsionAngle: 0 as number,
 		figureHeight: 10 as number,
 		figureColor: '#a970ff' as ColorRepresentation,
+		lightsColor: '#ffffff' as ColorRepresentation,
 	},
 	forklift: {
 		followLift: false,
@@ -115,8 +116,8 @@ animate(prevTime);
 function setUpGUI() {
 	const gui = new GUI();
 
-	const printerFolder = gui.addFolder('Impresión');
-	printerFolder
+	const printingFolder = gui.addFolder('Impresión');
+	printingFolder
 		.add(guiController.printer, 'surfaceType', surfaceTypes)
 		.onChange(() => {
 			if (guiController.printer.surfaceType === 'revolution') {
@@ -126,22 +127,22 @@ function setUpGUI() {
 				usedFigureNames = guiController.printer.extrusionFigureNames;
 				guiController.printer.figure = 'B1';
 			}
-			printerFolder.remove(figureController);
-			figureController = printerFolder.add(
+			printingFolder.remove(figureController);
+			figureController = printingFolder.add(
 				guiController.printer,
 				'figure',
 				usedFigureNames
 			);
-			printerFolder.updateDisplay();
+			printingFolder.updateDisplay();
 		})
 		.name('Tipo de superficie');
-	printerFolder
+	printingFolder
 		.add(guiController.printer, 'torsionAngle', 0, 2 * Math.PI, 0.01)
 		.name('Ángulo de Torsión');
-	printerFolder
+	printingFolder
 		.addColor(guiController.printer, 'figureColor')
 		.name('Color de la fig.');
-	printerFolder
+	printingFolder
 		.add(
 			guiController.printer,
 			'figureHeight',
@@ -151,9 +152,17 @@ function setUpGUI() {
 		)
 		.name('Altura de la fig.');
 
-	let figureController = printerFolder
+	let figureController = printingFolder
 		.add(guiController.printer, 'figure', usedFigureNames)
 		.name('Tipo de figura');
+
+	const printerFolder = gui.addFolder('Impresora');
+	printerFolder
+		.addColor(guiController.printer, 'lightsColor')
+		.name('Color de las luces')
+		.onChange(() => {
+			changePrinterLightsColor(guiController.printer.lightsColor);
+		});
 
 	const forkliftFolder = gui.addFolder('Auto Elevador');
 	forkliftFolder

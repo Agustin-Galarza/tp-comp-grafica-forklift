@@ -43,8 +43,8 @@ class SpotlightModel {
 	private configLight(position: Vector3) {
 		this.light.angle = Math.PI / 3;
 		this.light.distance = 0;
-		this.light.power = 1;
-		this.light.penumbra = 1;
+		this.light.power = 0.5;
+		this.light.penumbra = 0.15;
 	}
 	private generateMesh(position: Vector3, roofHeight: number): Mesh {
 		const height = 5;
