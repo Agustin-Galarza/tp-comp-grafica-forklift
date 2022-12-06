@@ -133,7 +133,6 @@ export function initUpdater(properties: UpdaterProperties) {
 		registerEvent,
 		registerEntity,
 	};
-	console.log(updater);
 	return updater;
 }
 
