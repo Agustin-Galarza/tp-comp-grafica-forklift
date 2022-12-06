@@ -3,7 +3,7 @@ import { Vector2 } from 'three';
 
 const ASSETS_FOLDER = '../res/';
 const TEXTURES_PATH = ASSETS_FOLDER + 'textures/';
-const NORMAL_MAPS_PATH = ASSETS_FOLDER + 'maps/';
+const NORMAL_MAPS_PATH = ASSETS_FOLDER + 'normalMaps/';
 const loader = new THREE.TextureLoader();
 
 // if(loader === undefined){

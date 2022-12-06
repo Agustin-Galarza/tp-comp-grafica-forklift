@@ -22,7 +22,7 @@ import {
 	updateCamera,
 } from './updater';
 import { Key } from './keyControls';
-import { loadTexture } from './textureLoader';
+import { loadTexture, TextureLoadParams } from './textureLoader';
 
 export type HangarSize = {
 	width: number; // x
@@ -128,15 +128,15 @@ function generateHangarMesh(size: HangarSize): Mesh {
 		100
 	);
 
-	const { texture, normal } = loadTexture({
+	let { textureMap, normalMap } = loadTexture({
 		textureName: 'StoneTilesFloor01_1K_BaseColor.png',
 		repeat: new Vector2(5, 5),
 		// normalMapName: 'StoneTilesFloor01_1K_Normal.png',
-		normalMapName: 'CorrugatedMetalPanel02_1K_Normal.png',
+		normalMapName: 'StoneTilesFloor01_1K_Normal.png',
 	});
 	let mat: Material = new THREE.MeshStandardMaterial({
-		map: texture,
-		normalMap: normal,
+		map: textureMap,
+		normalMap: normalMap,
 	});
 	let floorMesh = new Mesh(geo, mat);
 
@@ -156,8 +156,12 @@ function generateHangarMesh(size: HangarSize): Mesh {
 		-roofHalfTheta,
 		roofHalfTheta * 2
 	);
+	textureMap = loadTexture({
+		textureName: 'Rusted-Tin-Roof-Architextures.jpg',
+		repeat: new Vector2(2, 2),
+	} as TextureLoadParams).textureMap;
 	mat = new THREE.MeshStandardMaterial({
-		color: 0xc1dbe5,
+		map: textureMap,
 	});
 	mat.side = BackSide;
 	let roofMesh = new Mesh(geo, mat);
@@ -166,6 +170,27 @@ function generateHangarMesh(size: HangarSize): Mesh {
 	roofMesh.position.set(roofPosition.x, roofPosition.y, roofPosition.z);
 
 	//create walls
+	let wallTextureObj = loadTexture({
+		textureName: 'CorrugatedMetalPanel02_1K_BaseColor.png',
+		repeat: new Vector2(4, 1),
+		normalMapName: 'CorrugatedMetalPanel02_1K_Normal.png',
+	} as TextureLoadParams);
+	let topWallTextureObj = loadTexture({
+		textureName: 'CorrugatedMetalPanel02_1K_BaseColor.png',
+		repeat: new Vector2(4, 1),
+		normalMapName: 'CorrugatedMetalPanel02_1K_Normal.png',
+	} as TextureLoadParams);
+
+	mat = new THREE.MeshStandardMaterial({
+		map: wallTextureObj.textureMap,
+		normalMap: wallTextureObj.normalMap,
+	});
+	const topWallMat = new THREE.MeshStandardMaterial({
+		map: topWallTextureObj.textureMap,
+		normalMap: topWallTextureObj.normalMap,
+		// wireframe: true,
+	});
+
 	for (let i = 0; i < 4; i++) {
 		let width,
 			height = size.height;
@@ -174,11 +199,10 @@ function generateHangarMesh(size: HangarSize): Mesh {
 		} else {
 			width = size.length;
 		}
-		mat = new THREE.MeshStandardMaterial({
-			color: 0xa2b7db,
-		});
+
 		geo = new THREE.PlaneBufferGeometry(width, height, 100, 100);
 		let wallMesh = new Mesh(geo, mat);
+
 		if (i % 2 == 0) {
 			const topWallMesh = new Mesh(
 				createWallTopGeometry(
@@ -186,8 +210,23 @@ function generateHangarMesh(size: HangarSize): Mesh {
 					Math.PI / 2 - roofHalfTheta,
 					Math.PI / 2 + roofHalfTheta
 				),
-				mat
+				topWallMat
 			);
+
+			for (let i = 0; i < topWallMesh.geometry.attributes.position.count; i++) {
+				const x =
+					topWallMesh.geometry.attributes.position.getX(i) + size.width / 2;
+				const y =
+					topWallMesh.geometry.attributes.position.getY(i) + roofHeight / 2;
+
+				let u = topWallMesh.geometry.attributes.uv.getX(i);
+				let v = topWallMesh.geometry.attributes.uv.getY(i);
+
+				u = x / size.width;
+				v = y / (size.width * 2);
+
+				topWallMesh.geometry.attributes.uv.setXY(i, u, v);
+			}
 
 			topWallMesh.translateY(((i < 2 ? 1 : -1) * (roofHeight + height)) / 2);
 			if (i >= 2) {
