@@ -321,7 +321,7 @@ function generatePrinterMesh(size: PrinterSize, maxFigureHeight: number) {
 	const headColor = 0x4b7ece;
 
 	const lightsRadius = headHeight;
-	const lightsIntensity = 0.5;
+	const lightsIntensity = 0.3;
 	const lightsDistance = poleHeight * 1.5;
 	const lightsDecay = 3;
 

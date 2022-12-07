@@ -1,6 +1,5 @@
 import {
 	BoxGeometry,
-	Event,
 	Mesh,
 	MeshPhongMaterial,
 	Object3D,
@@ -9,8 +8,9 @@ import {
 } from 'three';
 import { BoxShape, Orientation } from './collisionManager';
 import { FigureHolder, canTakeFigure } from './figures';
-import { isKeyPressed, Key, keyActionCompleted } from './keyControls';
+import { Key, keyActionCompleted } from './keyControls';
 import { EventType, updateCamera, UpdateData } from './updater';
+import { loadTexture, TextureLoadParams } from './textureLoader';
 
 export type Size3 = {
 	width: number;
@@ -132,7 +132,12 @@ export class Shelves extends BoxShape implements FigureHolder {
 				this.poleSize,
 				poleHeight
 			);
-			const material = new MeshPhongMaterial({ color: 0xabbcbf });
+			geometry.computeVertexNormals();
+			geometry.normalizeNormals();
+			const material = new MeshPhongMaterial({
+				color: 0xabbcbf,
+				shininess: 100,
+			});
 			const mesh = new Mesh(geometry, material);
 			mesh.position.set(
 				~~(i / 2) * poleRowsWidthSeparation,
@@ -147,6 +152,14 @@ export class Shelves extends BoxShape implements FigureHolder {
 			}
 		}
 
+		const plankTexture = loadTexture({
+			textureName: 'Wood06_1K_BaseColor.png',
+			repeat: new Vector2(1, 4),
+			// normalMapName: 'Seamless_French_Walnut_Wood_Texture_NORMAL.jpg',
+			normalMapName: 'StoneTilesFloor01_1K_Normal.png',
+		} as TextureLoadParams);
+		// plankTexture.normalMap!.rotation = Math.PI / 2;
+
 		// generate planks
 		for (let i = 0; i < planksAmount; i++) {
 			const geometry = new BoxGeometry(
@@ -154,7 +167,10 @@ export class Shelves extends BoxShape implements FigureHolder {
 				planksDepth,
 				this.plankHeight
 			);
-			const material = new MeshPhongMaterial({ color: 0xf4c02a });
+			const material = new MeshPhongMaterial({
+				map: plankTexture.map,
+				normalMap: plankTexture.normalMap,
+			});
 			const mesh = new Mesh(geometry, material);
 
 			mesh.position.set(

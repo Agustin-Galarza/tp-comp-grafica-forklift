@@ -3,6 +3,7 @@ import {
 	AxesHelper,
 	Mesh,
 	MeshBasicMaterial,
+	MeshPhongMaterial,
 	PointLight,
 	Scene,
 	SphereGeometry,
@@ -122,7 +123,7 @@ function addLights(
 	// add central lights
 	const pos = new Vector3();
 	pos.setY(height);
-	const zValues = [maxLen / 2, 0, -maxLen / 2];
+	const zValues = [maxLen / 3, -maxLen / 3];
 
 	for (const zVal of zValues) {
 		let x, y;
