@@ -9,11 +9,6 @@ import { Color, ColorRepresentation, Vector3 } from 'three';
 import { changePrinterLightsColor, PrintFigureData } from './printer';
 import { initUpdater, UpdateData } from './updater';
 
-type ControllerDef = {
-	pressed: boolean;
-	callback: Function;
-};
-
 const surfaceTypes = ['extrusion', 'revolution'] as const;
 type SurfaceType = typeof surfaceTypes[number];
 

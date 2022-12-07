@@ -1,5 +1,4 @@
 import {
-	AxesHelper,
 	BoxGeometry,
 	BufferGeometry,
 	Color,
@@ -21,7 +20,7 @@ import {
 } from 'three';
 import { BoxShape, Orientation } from './collisionManager';
 import { FigureName, getFigure, FigureHolder, canTakeFigure } from './figures';
-import { isKeyPressed, Key, keyActionCompleted } from './keyControls';
+import { Key, keyActionCompleted } from './keyControls';
 import { UpdateData, EventType, updateCamera } from './updater';
 import { getGuiStatus, getPrintFigureData } from './main';
 import { loadEnvMap } from './textureLoader';
