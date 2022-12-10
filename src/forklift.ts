@@ -407,6 +407,7 @@ function generateForkliftMesh(forkliftSize: ForkliftSize, liftData: LiftData) {
 	const normals = geometry.attributes.normal;
 	const uvs = geometry.attributes.uv;
 	console.log({ poleSize, poleHeight });
+	// un-repeat texture on poles top and bottom
 	for (let i = 0; i < positions.count; i++) {
 		if (normals.getY(i) != 0) {
 			const x = positions.getX(i) + poleSize / 2;

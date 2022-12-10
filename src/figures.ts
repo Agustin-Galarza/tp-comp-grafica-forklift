@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { loadTexture, TextureLoadParams } from './textureLoader';
 import {
 	ColorRepresentation,
 	Curve,
@@ -14,12 +15,47 @@ export interface FigureHolder {
 export const figureNames = ['A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4'];
 export type FigureName = typeof figureNames[number];
 
+export type Pattern =
+	| 'P1A'
+	| 'P1B'
+	| 'P1C'
+	| 'P2A'
+	| 'P2B'
+	| 'P2C'
+	| 'P3'
+	| 'P4A'
+	| 'P4B';
+
+export const patterns: {
+	[name in Pattern]: string;
+} = {
+	P1A: 'Pattern01 VarA.png',
+	P1B: 'Pattern01 VarB.png',
+	P1C: 'Pattern01 VarC.png',
+	P2A: 'Pattern02 VarA.png',
+	P2B: 'Pattern02 VarB.png',
+	P2C: 'Pattern02 VarC.png',
+	P3: 'Pattern03.png',
+	P4A: 'Pattern04 VarA.png',
+	P4B: 'Pattern04 VarB.png',
+};
+
 export function canTakeFigure(obj: Object): obj is FigureHolder {
 	return 'takeFigure' in obj;
 }
 
 export function canGiveFigure(obj: Object): obj is FigureHolder {
 	return 'giveFigure' in obj;
+}
+
+let currentPattern: Pattern = 'P1A';
+
+export function getCurrentPattern() {
+	return currentPattern;
+}
+
+export function setCurrentPattern(pattern: Pattern) {
+	currentPattern = pattern;
 }
 
 type CurveType = 'bezier' | 'spline';
@@ -82,6 +118,13 @@ export function getFigure(
 		const points = getShapePoints(fig);
 		figureObject = getSimpleLatheMesh(points, color, clippingPlane);
 	}
+	const repeatU = 1;
+	const repeatV = 1;
+	const texture = loadTexture({
+		textureName: patterns[currentPattern],
+		repeat: new Vector2(repeatU, repeatV),
+	} as TextureLoadParams);
+	figureObject.material.map = texture.map;
 	return figureObject;
 }
 
@@ -89,7 +132,7 @@ function getSimpleLatheMesh(
 	points: Vector2[],
 	color: ColorRepresentation,
 	clippingPlane: Plane
-): Mesh {
+): Mesh<THREE.LatheBufferGeometry, THREE.MeshPhongMaterial> {
 	const geometry = new THREE.LatheBufferGeometry(points, 50);
 	const material = new THREE.MeshPhongMaterial({
 		color,
@@ -132,7 +175,7 @@ function getSimpleExtrudeMesh(
 	angle: number,
 	color: ColorRepresentation,
 	clippingPlane: Plane
-): Mesh {
+): Mesh<THREE.ExtrudeBufferGeometry, THREE.MeshPhongMaterial> {
 	const shape = new THREE.Shape(points);
 
 	const extrudeSettings = {
