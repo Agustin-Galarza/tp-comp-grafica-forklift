@@ -5,7 +5,7 @@ import keyController from './keyControls';
 import CollisionManager from './collisionManager';
 import { GUI } from 'dat.gui';
 import { FigureName } from './figures';
-import { Color, ColorRepresentation, Vector3 } from 'three';
+import { Color, ColorRepresentation, Vector3, Quaternion } from 'three';
 import { changePrinterLightsColor, PrintFigureData } from './printer';
 import { initUpdater, UpdateData } from './updater';
 

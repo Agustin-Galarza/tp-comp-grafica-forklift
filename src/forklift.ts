@@ -1,4 +1,5 @@
 import {
+	AxesHelper,
 	BoxGeometry,
 	Mesh,
 	MeshPhongMaterial,
@@ -15,6 +16,7 @@ import { EventType, updateCamera, UpdateData } from './updater';
 import { isKeyPressed, Key, keyActionCompleted } from './keyControls';
 import { FigureHolder, canTakeFigure } from './figures';
 import { getGuiStatus } from './main';
+import { loadTexture, TextureLoadParams } from './textureLoader';
 
 const forkliftShininess = 50;
 
@@ -357,30 +359,25 @@ function createForklift(properties: ForkliftProperties) {
 
 function generateForkliftMesh(forkliftSize: ForkliftSize, liftData: LiftData) {
 	//body
-	let geometry: THREE.BufferGeometry = new THREE.BoxGeometry(
-		forkliftSize.width,
-		forkliftSize.height,
-		forkliftSize.length
-	);
-	geometry.rotateX(Math.PI / 2);
-	geometry.rotateZ(Math.PI / 2);
-	let material = new THREE.MeshPhongMaterial({
-		color: 0xfdda0d,
-		shininess: forkliftShininess,
-	});
 	const bodyMesh = getOwnModel(forkliftSize, liftData.size);
 
 	//lift
 	const poleSize = liftData.size.length * 0.15;
-	geometry = new THREE.BoxGeometry(
+	let geometry: THREE.BufferGeometry = new THREE.BoxGeometry(
 		forkliftSize.width,
 		liftData.size.height,
 		liftData.size.length - poleSize
 	);
 	geometry.rotateX(Math.PI / 2);
 	geometry.rotateZ(Math.PI / 2);
-	material = new THREE.MeshPhongMaterial({
-		color: 0xffbf00,
+	const liftTexture = loadTexture({
+		textureName: 'red-orange-rugged-rusty-metal-texture.jpg',
+		normalMapName: 'texturaGruaNormalMap.jpg',
+	} as TextureLoadParams);
+	let material = new THREE.MeshPhongMaterial({
+		// color: 0xffbf00,
+		map: liftTexture.map,
+		normalMap: liftTexture.normalMap,
 		shininess: forkliftShininess,
 	});
 	const liftMesh = new Mesh(geometry, material);
@@ -393,11 +390,37 @@ function generateForkliftMesh(forkliftSize: ForkliftSize, liftData: LiftData) {
 	// / poles
 	const poleHeight = (liftData.range!.top - liftData.range!.bottom) * 1.1;
 	geometry = new BoxGeometry(poleSize, poleHeight, poleSize);
+	const repeatU = 1,
+		repeatV = 5;
+	const polesTexture = loadTexture({
+		textureName: 'rusty-metal-3.jpg',
+		repeat: new Vector2(repeatU, repeatV),
+	} as TextureLoadParams);
 	material = new MeshPhongMaterial({
 		color: 0x9eb1b8,
+		map: polesTexture.map,
 		shininess: forkliftShininess * 2,
 	});
 	let poleMesh = new Mesh(geometry, material);
+
+	const positions = geometry.attributes.position;
+	const normals = geometry.attributes.normal;
+	const uvs = geometry.attributes.uv;
+	console.log({ poleSize, poleHeight });
+	for (let i = 0; i < positions.count; i++) {
+		if (normals.getY(i) != 0) {
+			const x = positions.getX(i) + poleSize / 2;
+			const z = positions.getZ(i) + poleSize / 2;
+			let u = uvs.getX(i);
+			let v = uvs.getY(i);
+
+			u = Math.round((x / poleSize) * 100) / 100 / repeatU;
+			v = Math.round((z / poleSize) * 100) / 100 / repeatV;
+
+			uvs.setXY(i, u, v);
+		}
+	}
+
 	poleMesh.rotateX(-Math.PI / 2);
 	bodyMesh.add(poleMesh);
 	poleMesh.translateX(forkliftSize.length / 2 + poleSize / 2);
@@ -434,8 +457,14 @@ function generateForkliftMesh(forkliftSize: ForkliftSize, liftData: LiftData) {
 		radius: forkliftSize.length / 6,
 		width: 0.6,
 	};
+	const tireWidth = wheelSize.width * 1.2;
+
+	const wheelTexture = loadTexture({
+		textureName: 'rueda.jpg',
+	} as TextureLoadParams);
+
 	for (let i = 0; i < 4; i++) {
-		const radialSegments = 14;
+		const radialSegments = 20;
 		geometry = new THREE.CylinderGeometry(
 			wheelSize.radius,
 			wheelSize.radius,
@@ -446,7 +475,7 @@ function generateForkliftMesh(forkliftSize: ForkliftSize, liftData: LiftData) {
 		);
 		material = new THREE.MeshPhongMaterial({
 			color: 0xafaaad,
-			shininess: forkliftShininess,
+			map: wheelTexture.map,
 		});
 		const wheelMesh = new Mesh(geometry, material);
 		wheelMesh.name = 'wheel' + i;
@@ -454,20 +483,41 @@ function generateForkliftMesh(forkliftSize: ForkliftSize, liftData: LiftData) {
 
 		wheelMesh.translateX(((i < 2 ? 1 : -1) * forkliftSize.length) / 3);
 		wheelMesh.translateY(
-			(i % 2 == 0 ? 1 : -1) * (forkliftSize.width / 2 + wheelSize.width / 2)
+			((i % 2 == 0 ? 1 : -1) *
+				(forkliftSize.width + wheelSize.width + tireWidth)) /
+				2
 		);
 		wheelMesh.translateZ(-forkliftSize.height / 2);
 
-		const tireWidth = wheelSize.width * 0.8;
 		geometry = new TorusGeometry(
-			wheelSize.radius,
+			wheelSize.radius - tireWidth / 2,
 			tireWidth,
-			radialSegments,
-			10
+			10,
+			radialSegments
 		);
+
+		for (let i = 0; i < geometry.attributes.position.count; i++) {
+			const textureScaling = 0.5;
+
+			const x = geometry.attributes.position.getX(i);
+			const y = geometry.attributes.position.getY(i);
+
+			let u = geometry.attributes.uv.getX(i);
+			let v = geometry.attributes.uv.getY(i);
+
+			u =
+				(textureScaling * x) / (tireWidth + wheelSize.radius - tireWidth / 2) +
+				0.5;
+			v =
+				(textureScaling * y) / (tireWidth + wheelSize.radius - tireWidth / 2) +
+				0.5;
+
+			geometry.attributes.uv.setXY(i, u, v);
+		}
+
 		material = new MeshPhongMaterial({
-			color: 0x2f2a2d,
 			shininess: forkliftShininess,
+			map: wheelTexture.map,
 		});
 		const tireMesh = new Mesh(geometry, material);
 		wheelMesh.add(tireMesh);

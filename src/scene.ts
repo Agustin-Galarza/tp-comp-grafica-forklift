@@ -1,12 +1,10 @@
 import * as THREE from 'three';
 import {
 	AxesHelper,
-	Mesh,
+	BoxGeometry,
 	MeshBasicMaterial,
 	MeshPhongMaterial,
-	PointLight,
 	Scene,
-	SphereGeometry,
 	Vector2,
 	Vector3,
 } from 'three';
@@ -16,6 +14,7 @@ import { createHangar, Hangar, HangarSize } from './hangar';
 import { createPrinter, Printer, PrinterSize } from './printer';
 import { createShelves, Shelves, Size3 } from './shelves';
 import { generateSpotlight } from './spotlight';
+import { loadTexture, TextureLoadParams } from './textureLoader';
 
 export const CONSTANTS = {
 	forklift: {

@@ -77,7 +77,6 @@ export function updateCamera(properties: UpdateCameraProperties) {
 
 export function cameraZoomIn(amount: number, updateData: UpdateData) {
 	const { camera, orbitControls } = updateData;
-	console.debug(cameraStatus);
 	if (cameraStatus.pov) return;
 	const distToTarget = orbitControls.target.distanceTo(camera.position);
 	if (distToTarget > cameraStatus.zoomNearThreshold) {
