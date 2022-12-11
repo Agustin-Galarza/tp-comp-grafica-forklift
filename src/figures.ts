@@ -236,7 +236,7 @@ function twistMesh(mesh: Mesh, angle: number, height: number): Mesh {
 	 * De esta forma, al agregar valores al mapa, tengo que acumular cada normal con la que sea más cercana.
 	 * Para definir cercanía tengo que establecer algún criterio: de momento va a ser que las normales tienen que tener un ángluo entre ellas menor a PI/4 para que sean consideradas cercanas.
 	 */
-	const vertexMap = new Map<Vector3, Array<Vector3>>(); // key: vertex position || value: vertex normal
+	const vertexMap = new Map<Number, Array<Vector3>>(); // key: vertex position || value: array of vertex normals
 
 	function vectorEquals(v1: Vector3, v2: Vector3): boolean {
 		const equalsFloats = (n1: number, n2: number, epsilon: number) =>
@@ -247,31 +247,59 @@ function twistMesh(mesh: Mesh, angle: number, height: number): Mesh {
 			equalsFloats(v1.z, v2.z, EPSILON)
 		);
 	}
-	function hasPosition(
-		map: Map<Vector3, Array<Vector3>>,
-		position: Vector3
-	): boolean {
-		for (let keyPosition of map.keys()) {
-			if (vectorEquals(keyPosition, position)) return true;
-		}
-		return false;
-	}
-	function getPositionValue(
-		map: Map<Vector3, Array<Vector3>>,
-		position: Vector3
-	): Array<Vector3> {
-		for (let entry of map.entries()) {
-			if (vectorEquals(entry[0], position)) return entry[1];
-		}
-		throw new Error(
-			`Could not find value (${position.x},${position.y},${position.z}) in map`
+
+	/*****************************
+	 * 		Vertex map utils
+	 ******************************/
+
+	function generateKeyPosition(position: Vector3): Number {
+		const trimFactor = 1000;
+		const trimFloat = (n: number) => Math.round(n * trimFactor) / trimFactor;
+		const keyPosition = position.clone();
+		keyPosition.set(
+			trimFloat(keyPosition.x),
+			trimFloat(keyPosition.y),
+			trimFloat(keyPosition.z)
+		);
+		return (
+			Math.pow(2, keyPosition.x) +
+			Math.pow(3, keyPosition.y) +
+			Math.pow(5, keyPosition.z)
 		);
 	}
+	function hasPosition(
+		map: Map<Number, Array<Vector3>>,
+		position: Vector3
+	): boolean {
+		return map.has(generateKeyPosition(position));
+	}
+	function getPositionValue(
+		map: Map<Number, Array<Vector3>>,
+		position: Vector3
+	): Array<Vector3> {
+		const value = map.get(generateKeyPosition(position));
+		if (value === undefined)
+			throw new Error(
+				`Could not find value (${position.x},${position.y},${position.z}) in map`
+			);
+		return value;
+	}
+	function addPosition(
+		map: Map<Number, Array<Vector3>>,
+		position: Vector3,
+		normal: Vector3
+	) {
+		map.set(generateKeyPosition(position), [normal]);
+	}
+	/*****************************
+	 * 		END - Vertex map utils
+	 ******************************/
+
 	function areNormalsClose(normal1: Vector3, normal2: Vector3): boolean {
 		return normal1.angleTo(normal2) < Math.PI / 4;
 	}
 	function mergeNormal(
-		map: Map<Vector3, Array<Vector3>>,
+		map: Map<Number, Array<Vector3>>,
 		position: Vector3,
 		normal: Vector3
 	): void {
@@ -294,7 +322,7 @@ function twistMesh(mesh: Mesh, angle: number, height: number): Mesh {
 		if (hasPosition(vertexMap, position)) {
 			mergeNormal(vertexMap, position, normal);
 		} else {
-			vertexMap.set(position, [normal]);
+			addPosition(vertexMap, position, normal);
 		}
 	}
 
