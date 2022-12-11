@@ -1,6 +1,12 @@
 import * as THREE from 'three';
 import { loadTexture, TextureLoadParams } from './textureLoader';
 import {
+	AxesHelper,
+	BufferAttribute,
+	MeshNormalMaterial,
+	Vector3,
+} from 'three';
+import {
 	ColorRepresentation,
 	Curve,
 	Mesh,
@@ -125,6 +131,34 @@ export function getFigure(
 		repeat: new Vector2(repeatU, repeatV),
 	} as TextureLoadParams);
 	figureObject.material.map = texture.map;
+
+	// curstom uv mapping
+	const positions = figureObject.geometry.attributes.position;
+	const uvs = figureObject.geometry.attributes.uv;
+	const normals = figureObject.geometry.attributes.normal;
+	for (let i = 0; i < positions.count; i++) {
+		const yNormal = normals.getY(i);
+		const x = positions.getX(i);
+		const y = positions.getY(i);
+		const z = positions.getZ(i);
+
+		let u = uvs.getX(i);
+		let v = uvs.getY(i);
+
+		if (yNormal == 1 || yNormal == -1) {
+			u = ((x + width / 2) / width) * 2;
+			v = ((z + width / 2) / width) * 2;
+		} else {
+			// get angle
+			const angle = Math.atan2(z, x);
+			u = angle / (2 * Math.PI);
+			v = y / height;
+		}
+
+		uvs.setXY(i, u, v);
+	}
+	figureObject.add(new AxesHelper(3));
+	// figureObject.material = new MeshNormalMaterial({ wireframe: false });
 	return figureObject;
 }
 
@@ -145,27 +179,119 @@ function getSimpleLatheMesh(
 }
 
 function twistMesh(mesh: Mesh, angle: number, height: number): Mesh {
-	const positions = mesh.geometry.attributes.position.array;
-	for (let i = 0; i < positions.length; i += 3) {
-		const index = i / 3;
-		const pos = new THREE.Vector3(
-			positions[i],
-			positions[i + 1],
-			positions[i + 2]
+	if (angle <= 0) return mesh;
+	/**
+	 * Tengo un eje de rotación, un vector de posición y el vector normal actual
+	 * Para el vector normal pueden ocurrir varias cosas:
+	 * - Si el vector es paralelo al vector de rotación, el vector normal no se ve afectado por la rotación
+	 * - Si el vector es paralelo al vector de posición, el vector normal se rota por el ángulo de rotación
+	 * - Para los otros casos hay que ver la relación entre el vector normal y el de posición. Se tiene que calcular el ángulo de desfazaje entre el vector normal y el de posición, siendo este ángulo menor a 180°. Si el ángulo es positivo (en el sentido de la rotación) entonces el vector normal se rota hacia abajo (en contra del vector de rotación) una cantidad igual al delta del ángulo de rotación. Si el ángulo es negativo, entonces dicha variación es hacia arriba. En todos los casos al vector normal también se lo rota por el ángulo de rotación.
+	 */
+	function fromAttribute(
+		attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
+		index: number
+	): Vector3 {
+		return new Vector3(
+			attribute.getX(index),
+			attribute.getY(index),
+			attribute.getZ(index)
 		);
-
-		const _angle = (pos.z * angle) / (height * 1);
-		const updateX = pos.x * Math.cos(_angle) - pos.y * Math.sin(_angle);
-		const updateY = pos.y * Math.cos(_angle) + pos.x * Math.sin(_angle);
-
-		mesh.geometry.attributes.position.setX(index, updateX);
-		mesh.geometry.attributes.position.setY(index, updateY);
-		mesh.geometry.attributes.position.setZ(index, pos.z + height / 2);
 	}
+
+	const EPSILON = 1e-8;
+	const rotation = new Vector3(0, 0, 1);
+
+	function getOrthogonalVector(normal: Vector3): Vector3 {
+		let x;
+		let y;
+		if (Math.abs(normal.x) < EPSILON) {
+			x = 1;
+			y = 0;
+		} else if (Math.abs(normal.y) < EPSILON) {
+			x = 0;
+			y = 1;
+		} else {
+			x = 1;
+			y = -normal.x / normal.y;
+		}
+		const z = 0;
+		const vec = new Vector3(x, y, z);
+		if (Math.abs(vec.dot(normal)) > EPSILON)
+			throw new Error(
+				'Computed vector is not orthogonal, dot product is ' + vec.dot(normal)
+			);
+		return vec.normalize();
+	}
+	console.log(mesh.geometry.attributes);
+
+	const positions = mesh.geometry.attributes.position;
+	const normals = mesh.geometry.attributes.normal;
+	for (let i = 0; i < positions.count; i++) {
+		const position: Vector3 = fromAttribute(positions, i);
+		// position.setZ(position.z + height / 2);
+		const normal: Vector3 = fromAttribute(normals, i);
+
+		if (normal.equals(new Vector3())) continue;
+
+		const deltaRotation = angle / height;
+		const currentRotation = deltaRotation * position.z;
+
+		if (
+			/* Normal is parallel to rotation */
+			Math.abs(normal.dot(rotation)) >
+			1 - EPSILON //Both vectors are normalized so the dot product should be 1 if parallel
+		) {
+			// Nothing happens
+		} else if (
+			/* Normal parallel to position */
+			Math.abs(normal.dot(position)) >
+			position.length() - EPSILON
+		) {
+			normal.applyAxisAngle(rotation, currentRotation);
+		} else {
+			const planeNormal = normal.clone().setZ(0);
+			// normal.applyAxisAngle(rotation, currentRotation);
+
+			// El ángulo es positivo (respecto a la rotación) si el producto cruz entre el vector de posición y el vector normal es parallelo al vector de rotación
+			const planePosition = position.clone().setZ(0);
+
+			const crossProduct = planePosition.clone().cross(planeNormal);
+
+			const shiftSign = crossProduct.z > EPSILON ? 1 : -1;
+			const verticalRotationAngle =
+				shiftSign * Math.atan(deltaRotation * planePosition.length());
+
+			const orthogonalToNormal: Vector3 = getOrthogonalVector(normal);
+			if (planeNormal.clone().cross(orthogonalToNormal).z < -EPSILON)
+				orthogonalToNormal.multiplyScalar(-1);
+
+			// if (i % 1000 === 0)
+			// console.log({ normal, orthogonalToNormal, verticalRotationAngle });
+			normal.applyAxisAngle(rotation, currentRotation);
+			normal.applyAxisAngle(orthogonalToNormal, verticalRotationAngle);
+		}
+
+		// Update Normal
+		normal.normalize();
+		normals.setXYZ(i, normal.x, normal.y, normal.z);
+
+		// Update position
+		const updateX =
+			position.x * Math.cos(currentRotation) -
+			position.y * Math.sin(currentRotation);
+		const updateY =
+			position.y * Math.cos(currentRotation) +
+			position.x * Math.sin(currentRotation);
+
+		positions.setXY(i, updateX, updateY);
+	}
+	// console.log(normals);
 	mesh.geometry.attributes.position.needsUpdate = true;
+	mesh.geometry.attributes.normal.needsUpdate = true;
 	mesh.geometry.computeBoundingBox();
 	mesh.geometry.computeBoundingSphere();
-	mesh.geometry.computeVertexNormals();
+	// TODO: re-compute normals manually
+	// mesh.geometry.computeVertexNormals();
 	return mesh;
 }
 
@@ -191,8 +317,13 @@ function getSimpleExtrudeMesh(
 		shininess: 32,
 		clippingPlanes: [clippingPlane],
 	});
+	// const material = new THREE.MeshNormalMaterial();
 	const mesh = new THREE.Mesh(geometry, material);
 	twistMesh(mesh, angle, height);
+	geometry.rotateX(-Math.PI / 2);
+	mesh.rotateX(Math.PI / 2);
+	mesh.geometry.center();
+	mesh.geometry.translate(0, height / 2, 0);
 	return mesh;
 }
 
@@ -220,7 +351,7 @@ function getSegmentPoints(
 	);
 	const curve = curveInitializers[type](basePoints);
 
-	const pointsCB = curve.getPoints(50);
+	const pointsCB = curve.getPoints(5);
 	return pointsCB;
 }
 function getShapePoints(figure: Figure): Vector2[] {

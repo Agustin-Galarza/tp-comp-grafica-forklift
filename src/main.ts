@@ -32,6 +32,12 @@ export function getGuiStatus() {
 	return guiController;
 }
 
+// TODO: delete
+const vec1 = new Vector3(1, 0, 0);
+const vec2 = new Vector3(0, 1, 0);
+
+console.log(vec1.clone().cross(vec2));
+
 export function getPrintFigureData(): PrintFigureData {
 	return {
 		type: guiController.printer.figure,
