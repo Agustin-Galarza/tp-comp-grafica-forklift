@@ -181,11 +181,10 @@ function getSimpleLatheMesh(
 function twistMesh(mesh: Mesh, angle: number, height: number): Mesh {
 	if (angle <= 0) return mesh;
 	/**
-	 * Tengo un eje de rotación, un vector de posición y el vector normal actual
-	 * Para el vector normal pueden ocurrir varias cosas:
-	 * - Si el vector es paralelo al vector de rotación, el vector normal no se ve afectado por la rotación
-	 * - Si el vector es paralelo al vector de posición, el vector normal se rota por el ángulo de rotación
-	 * - Para los otros casos hay que ver la relación entre el vector normal y el de posición. Se tiene que calcular el ángulo de desfazaje entre el vector normal y el de posición, siendo este ángulo menor a 180°. Si el ángulo es positivo (en el sentido de la rotación) entonces el vector normal se rota hacia abajo (en contra del vector de rotación) una cantidad igual al delta del ángulo de rotación. Si el ángulo es negativo, entonces dicha variación es hacia arriba. En todos los casos al vector normal también se lo rota por el ángulo de rotación.
+	 * Otra idea totalmente distinta, suavizar las normales:
+	 * Para esto primero tengo que rotar todos los puntos hasta la figura que quiero y recalcular las normales, y una vez hecho esto tengo que iterar por todos los vértices de la figura.
+	 * El problema es que threejs separa los vértices según el triángulo al que pertenecen, por lo que un vértice (como una posición) que aparece en dos triángulos se repite dos veces en la data de la figura
+	 * Para sobrepasar esto tengo que generar mi propio mapa de vértices, donde la posición sea la key y el valor sea la normal resultante. De esta forma, voy recorriendo todos los vértices y los agrego al mapa, sumando el valor de su normal al resultado. Una vez que termino con esto, vuelvo a recorrer todos los vértices y le reasigno la nueva normal normalizada.
 	 */
 	function fromAttribute(
 		attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
@@ -199,99 +198,128 @@ function twistMesh(mesh: Mesh, angle: number, height: number): Mesh {
 	}
 
 	const EPSILON = 1e-8;
-	const rotation = new Vector3(0, 0, 1);
-
-	function getOrthogonalVector(normal: Vector3): Vector3 {
-		let x;
-		let y;
-		if (Math.abs(normal.x) < EPSILON) {
-			x = 1;
-			y = 0;
-		} else if (Math.abs(normal.y) < EPSILON) {
-			x = 0;
-			y = 1;
-		} else {
-			x = 1;
-			y = -normal.x / normal.y;
-		}
-		const z = 0;
-		const vec = new Vector3(x, y, z);
-		if (Math.abs(vec.dot(normal)) > EPSILON)
-			throw new Error(
-				'Computed vector is not orthogonal, dot product is ' + vec.dot(normal)
-			);
-		return vec.normalize();
-	}
-	console.log(mesh.geometry.attributes);
 
 	const positions = mesh.geometry.attributes.position;
 	const normals = mesh.geometry.attributes.normal;
+
+	// Rotate points
 	for (let i = 0; i < positions.count; i++) {
 		const position: Vector3 = fromAttribute(positions, i);
 		// position.setZ(position.z + height / 2);
-		const normal: Vector3 = fromAttribute(normals, i);
-
-		if (normal.equals(new Vector3())) continue;
 
 		const deltaRotation = angle / height;
 		const currentRotation = deltaRotation * position.z;
 
-		if (
-			/* Normal is parallel to rotation */
-			Math.abs(normal.dot(rotation)) >
-			1 - EPSILON //Both vectors are normalized so the dot product should be 1 if parallel
-		) {
-			// Nothing happens
-		} else if (
-			/* Normal parallel to position */
-			Math.abs(normal.dot(position)) >
-			position.length() - EPSILON
-		) {
-			normal.applyAxisAngle(rotation, currentRotation);
-		} else {
-			const planeNormal = normal.clone().setZ(0);
-			// normal.applyAxisAngle(rotation, currentRotation);
-
-			// El ángulo es positivo (respecto a la rotación) si el producto cruz entre el vector de posición y el vector normal es parallelo al vector de rotación
-			const planePosition = position.clone().setZ(0);
-
-			const crossProduct = planePosition.clone().cross(planeNormal);
-
-			const shiftSign = crossProduct.z > EPSILON ? 1 : -1;
-			const verticalRotationAngle =
-				shiftSign * Math.atan(deltaRotation * planePosition.length());
-
-			const orthogonalToNormal: Vector3 = getOrthogonalVector(normal);
-			if (planeNormal.clone().cross(orthogonalToNormal).z < -EPSILON)
-				orthogonalToNormal.multiplyScalar(-1);
-
-			// if (i % 1000 === 0)
-			// console.log({ normal, orthogonalToNormal, verticalRotationAngle });
-			normal.applyAxisAngle(rotation, currentRotation);
-			normal.applyAxisAngle(orthogonalToNormal, verticalRotationAngle);
-		}
-
-		// Update Normal
-		normal.normalize();
-		normals.setXYZ(i, normal.x, normal.y, normal.z);
-
-		// Update position
-		const updateX =
+		const newX =
 			position.x * Math.cos(currentRotation) -
 			position.y * Math.sin(currentRotation);
-		const updateY =
+		const newY =
 			position.y * Math.cos(currentRotation) +
 			position.x * Math.sin(currentRotation);
 
-		positions.setXY(i, updateX, updateY);
+		position.setX(newX);
+		position.setY(newY);
+
+		positions.setXYZ(i, position.x, position.y, position.z);
 	}
 	// console.log(normals);
 	mesh.geometry.attributes.position.needsUpdate = true;
-	mesh.geometry.attributes.normal.needsUpdate = true;
+	// mesh.geometry.attributes.normal.needsUpdate = true;
 	mesh.geometry.computeBoundingBox();
 	mesh.geometry.computeBoundingSphere();
-	// TODO: re-compute normals manually
-	// mesh.geometry.computeVertexNormals();
+	// Let threejs re-compute all the normals
+	mesh.geometry.computeVertexNormals();
+
+	/**
+	 * Para poder preservar los ejes filosos, tengo que cambiar el mapa por uno que tenga un array de normales en sus valores.
+	 * La idea es que por cada posición puede haber varias normales, cada una representando la normal de cada una de las caras que comparten el borde afilado.
+	 * De esta forma, al agregar valores al mapa, tengo que acumular cada normal con la que sea más cercana.
+	 * Para definir cercanía tengo que establecer algún criterio: de momento va a ser que las normales tienen que tener un ángluo entre ellas menor a PI/4 para que sean consideradas cercanas.
+	 */
+	const vertexMap = new Map<Vector3, Array<Vector3>>(); // key: vertex position || value: vertex normal
+
+	function vectorEquals(v1: Vector3, v2: Vector3): boolean {
+		const equalsFloats = (n1: number, n2: number, epsilon: number) =>
+			Math.abs(n1 - n2) < epsilon;
+		return (
+			equalsFloats(v1.x, v2.x, EPSILON) &&
+			equalsFloats(v1.y, v2.y, EPSILON) &&
+			equalsFloats(v1.z, v2.z, EPSILON)
+		);
+	}
+	function hasPosition(
+		map: Map<Vector3, Array<Vector3>>,
+		position: Vector3
+	): boolean {
+		for (let keyPosition of map.keys()) {
+			if (vectorEquals(keyPosition, position)) return true;
+		}
+		return false;
+	}
+	function getPositionValue(
+		map: Map<Vector3, Array<Vector3>>,
+		position: Vector3
+	): Array<Vector3> {
+		for (let entry of map.entries()) {
+			if (vectorEquals(entry[0], position)) return entry[1];
+		}
+		throw new Error(
+			`Could not find value (${position.x},${position.y},${position.z}) in map`
+		);
+	}
+	function areNormalsClose(normal1: Vector3, normal2: Vector3): boolean {
+		return normal1.angleTo(normal2) < Math.PI / 4;
+	}
+	function mergeNormal(
+		map: Map<Vector3, Array<Vector3>>,
+		position: Vector3,
+		normal: Vector3
+	): void {
+		const normalsArray = getPositionValue(map, position);
+		let foundCloseNormal = false;
+		for (let n = 0; n < normalsArray.length && !foundCloseNormal; n++) {
+			const accumulatedNormal = normalsArray[n];
+			if (areNormalsClose(accumulatedNormal, normal)) {
+				accumulatedNormal.add(normal);
+				foundCloseNormal = true;
+			}
+		}
+		if (!foundCloseNormal) normalsArray.push(normal);
+	}
+
+	for (let i = 0; i < positions.count; i++) {
+		const position = fromAttribute(positions, i);
+		const normal = fromAttribute(normals, i);
+		// merge position
+		if (hasPosition(vertexMap, position)) {
+			mergeNormal(vertexMap, position, normal);
+		} else {
+			vertexMap.set(position, [normal]);
+		}
+	}
+
+	for (let i = 0; i < positions.count; i++) {
+		const normalsArray = getPositionValue(
+			vertexMap,
+			fromAttribute(positions, i)
+		);
+		let foundCloseNormal = false;
+		for (let n = 0; n < normalsArray.length && !foundCloseNormal; n++) {
+			const accumulatedNormal = normalsArray[n];
+			if (areNormalsClose(accumulatedNormal, fromAttribute(normals, i))) {
+				accumulatedNormal.normalize();
+				normals.setXYZ(
+					i,
+					accumulatedNormal.x,
+					accumulatedNormal.y,
+					accumulatedNormal.z
+				);
+				foundCloseNormal = true;
+			}
+		}
+		if (!foundCloseNormal) throw new Error('Could not find appropiate normal');
+	}
+
 	return mesh;
 }
 
